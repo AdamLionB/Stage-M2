@@ -9,7 +9,7 @@ from scorch.scores import links_from_clusters
 from sklearn import metrics
 from sklearn.metrics.cluster import contingency_matrix
 from scipy.stats import beta
-from random import shuffle
+from random import shuffle, random
 from math import ceil
 from functools import reduce
 import pathlib
@@ -17,7 +17,8 @@ import os
 from time import time
 from copy import copy
 from typing import List, Set, Callable, Iterator, Tuple, Union, Optional, Dict
-from itertools import zip_longest, cycle
+from itertools import zip_longest, cycle, combinations
+from collections import defaultdict
 
 def kaapa(k, r) :
 	C_k, N_k = links_from_clusters(k)
@@ -33,16 +34,43 @@ def kaapa(k, r) :
 
 Partition = List[Set]
 
-def random_partition(mentions :List, distrib : Callable[[], float]) -> Partition:
+def construct_partition(mentions : List, p = 0.01) -> Partition:
 	shuffle(mentions)
-	cluster = []
+	partitions :  Dict[Any, Set]= {}
+	tmp = defaultdict(set)
+	heads = {}
+	for a, b in combinations(mentions, 2) :
+		if a not in heads :
+			heads[a] = a
+		if b not in heads :
+			heads[b] = b
+		if random() < p :
+			heads[b] = heads[a]
+			tmp[a].add(b)
+	for m in mentions :
+		partitions[heads[m]] = partitions.setdefault(heads[m], set()).union(tmp[m])
+	partitions = [v.union([k]) for k,v in partitions.items()]
+	return partitions
+			
+def random_partition(mentions :List, distrib : Callable[[], float]) -> Partition:
+	'''
+	Generates a random partitions of mentions.
+	The size of the clusters composing the partitions is randomly drawn following the random
+	generator distrib.
+	'''
+	shuffle(mentions)
+	partitions = []
 	while len(mentions) != 0 :
 		y = ceil(distrib() * len(mentions))
-		cluster.append(set(mentions[:y]))
+		partitions.append(set(mentions[:y]))
 		mentions = mentions[y:]
-	return cluster
+	return partitions
 
 def beta_partition(mentions : List, a : float, b : float) -> Partition:
+	r'''
+	Generates a random partitions of mentions, which cluster sizes are randomly drawn following a 
+	beta distribution of parameter a, b.
+	'''
 	return random_partition(mentions, beta(a,b).rvs)
 
 def entity_partition(mentions : List) -> Partition:
@@ -135,12 +163,12 @@ def get_scores(gold : Partition, sys : Partition) -> Scores:
 
 def K() -> Iterator[Partition]:
 	for n, file in enumerate(os.listdir('../ancor/json/')):
-		if n > 1 : break
+		if n > 0 : break
 		yield clusters_from_json(open('../ancor/json/'+file))
 
 def score_partitions(K : Iterator[Partition]) -> Iterator[Scores]:
 	for n, k in enumerate(K) :
-		R : Iterator[Partition] = (wow_partition(get_mentions(k)) for _ in range(1))
+		R : Iterator[Partition] = (construct_partition(get_mentions(k)) for _ in range(1))
 		yield scoress_average(map(lambda r : get_scores(k,r), R))
 
 
