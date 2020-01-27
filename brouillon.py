@@ -1,5 +1,6 @@
-import sys
+from __future__ import annotations
 
+import sys
 sys.path.insert(1, '../scorch')
 
 from scorch.main import METRICS, clusters_from_json
@@ -10,8 +11,13 @@ from sklearn.metrics.cluster import contingency_matrix
 from scipy.stats import beta
 from random import shuffle
 from math import ceil
+from functools import reduce
 import pathlib
-
+import os
+from time import time
+from copy import copy
+from typing import List, Set, Callable, Iterator, Tuple, Union, Optional, Dict
+from itertools import zip_longest, cycle
 
 def kaapa(k, r) :
 	C_k, N_k = links_from_clusters(k)
@@ -25,8 +31,9 @@ def kaapa(k, r) :
 	return ((tp_c + tp_n ) / (c_k + n_k) - (( (c_k * c_r ) + (n_k * n_r) ) / (c_k + n_k)**2)) / (1 - (( (c_k * c_r ) + (n_k * n_r) ) / (c_k + n_k)**2))
 	#print(tp_c, tp_n, c_k, n_k, c_r, n_r)
 
+Partition = List[Set]
 
-def random_partition(mentions, distrib) :
+def random_partition(mentions :List, distrib : Callable[[], float]) -> Partition:
 	shuffle(mentions)
 	cluster = []
 	while len(mentions) != 0 :
@@ -35,10 +42,31 @@ def random_partition(mentions, distrib) :
 		mentions = mentions[y:]
 	return cluster
 
-def beta_partition(mentions, a, b):
+def beta_partition(mentions : List, a : float, b : float) -> Partition:
 	return random_partition(mentions, beta(a,b).rvs)
 
-def mentions(partition) :
+def entity_partition(mentions : List) -> Partition:
+	return random_partition(mentions, lambda : 1)
+
+def singleton_partition(mentions : List) -> Partition:
+	return random_partition(mentions, lambda : 1/(len(mentions)+1))
+
+class Such_random():
+	def __init__(self):
+		self.seed = cycle([1,2,3,4])
+	def __call__(self):
+		return 1 / next(self.seed)
+
+such_random = Such_random()
+def wow_partition(mentions : List) -> Parition:
+	cluster = []
+	while len(mentions) != 0 :
+		y = ceil(such_random() * len(mentions))
+		cluster.append(set(mentions[:y]))
+		mentions = mentions[y:]
+	return cluster
+
+def get_mentions(partition : Partition) -> List :
 	return [mention for entity in partition for mention in entity]
 
 SK_METRICS = {
@@ -58,38 +86,78 @@ r3 = [{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}]
 
 R = [r1]# [r1, r2, r3]
 
+class Scores():
+	def __init__(self, dic :Dict[str, Tuple[float, ...]]):
+		self.dic = dic
+	def __add__(self, other : Optional[Key_tuple]) -> Key_tuple:
+		return Scores({
+			sk : tuple((x + y for x,y in zip(sv, ov)))
+			for (sk, sv), ov in zip(self.dic.items(), other.dic.values())
+		})
+	def __truediv__(self, scalar : float) -> Key_tuple:
+		return Scores({
+			k : tuple((x / scalar for x in v)) 
+			for k,v in self.dic.items()
+		})
+	def __str__(self) -> str:
+		res = ''
+		for k, v in self.dic.items() :
+			res += f'{k}\t: {v}\n'
+		return res
 
-def partition_to_classif(partition):
+def to_tuple(e : Union[Any, Tuple[Any]]) -> Tuple[Any] :
+	if type(e) == tuple :
+		return e
+	return e,
+
+def scoress_average(scoress : Iterator[Scores]) -> Scores :
+	res = next(scoress)
+	count = 1
+	for scores in scoress :
+		res = res + scores
+		count +=1
+	return res / count
+
+def partition_to_classif(partition : Partition) -> List:
 	tmp = {item : n for n, cluster in enumerate(partition) for item in cluster}
 	return [v for k,v in sorted(tmp.items())]
 		
-
-
-def all_scores(gold_clusters, sys_clusters):
+def get_scores(gold : Partition, sys : Partition) -> Scores:
 	res = {}
 	for name, metric in METRICS.items():
-		res[name] = metric(gold_clusters, sys_clusters)
-	res['conll'] = scores.conll2012(gold_clusters, sys_clusters)
-
-	gold_clusters = partition_to_classif(gold_clusters)
-	sys_clusters = partition_to_classif(sys_clusters)
+		res[name] = to_tuple(metric(gold, sys))
+	res['conll'] = to_tuple(scores.conll2012(gold, sys))
+	gold = partition_to_classif(gold)
+	sys = partition_to_classif(sys)
 	for name, metric in SK_METRICS.items():
-		res[name] = metric(gold_clusters, sys_clusters)
-	return res
-#k = r_cluster_beta(100, 1, 1)
+		res[name] = to_tuple(metric(gold, sys))
+	return Scores(res)
 
-k = clusters_from_json(open('../ancor/json/1AG0141.json'))
+def K() -> Iterator[Partition]:
+	for n, file in enumerate(os.listdir('../ancor/json/')):
+		if n > 1 : break
+		yield clusters_from_json(open('../ancor/json/'+file))
+
+def score_partitions(K : Iterator[Partition]) -> Iterator[Scores]:
+	for n, k in enumerate(K) :
+		R : Iterator[Partition] = (wow_partition(get_mentions(k)) for _ in range(1))
+		yield scoress_average(map(lambda r : get_scores(k,r), R))
+
+
+start = time()
+#print(tmp(scores_all_K(K())))
+gen = scoress_average(score_partitions(K()))
+print(gen)
+print(time()-start)
+
+#k = clusters_from_json(open('../ancor/json/1AG0141.json'))
 #print(len(k))
 #print(k)
 
-R = (beta_partition(mentions(k), 1, 1) for _ in range(5))
+#R = (beta_partition(mentions(k), 1, 1) for _ in range(100))
 
-for r in R :
-	#print(r)
-	print(all_scores(k,r)['MUC'][2])
-	# for name, score in all_scores(k, r).items():
-		# print(f'{name=}\t: {score}')
-	print()
+# R = (entity_partition(mentions()) for _ in range(100))
+# #R = (singleton_partition(mentions(k)) for _ in range(100))
 
 #print(k)
 
