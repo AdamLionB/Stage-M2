@@ -11,13 +11,14 @@ from sklearn.metrics.cluster import contingency_matrix
 from scipy.stats import beta
 from random import shuffle, random
 from math import ceil
-from functools import reduce
+
 import pathlib
 import os
 from time import time
 from copy import copy
 from typing import List, Set, Callable, Iterator, Tuple, Union, Optional, Dict
 from itertools import zip_longest, cycle, combinations
+from functools import reduce, partial
 from collections import defaultdict
 
 def kaapa(k, r) :
@@ -39,11 +40,9 @@ def construct_partition(mentions : List, p = 0.01) -> Partition:
 	partitions :  Dict[Any, Set]= {}
 	tmp = defaultdict(set)
 	heads = {}
+	for m in mentions :
+		heads[m] = m
 	for a, b in combinations(mentions, 2) :
-		if a not in heads :
-			heads[a] = a
-		if b not in heads :
-			heads[b] = b
 		if random() < p :
 			heads[b] = heads[a]
 			tmp[a].add(b)
@@ -163,20 +162,25 @@ def get_scores(gold : Partition, sys : Partition) -> Scores:
 
 def K() -> Iterator[Partition]:
 	for n, file in enumerate(os.listdir('../ancor/json/')):
-		if n > 0 : break
+		#if n > 0 : break
 		yield clusters_from_json(open('../ancor/json/'+file))
 
-def score_partitions(K : Iterator[Partition]) -> Iterator[Scores]:
+def score_random_partitions(
+	K : Iterator[Partition],
+	parition_generator : Callable[List, Partition]
+) -> Iterator[Scores]:
 	for n, k in enumerate(K) :
-		R : Iterator[Partition] = (construct_partition(get_mentions(k)) for _ in range(1))
+		R : Iterator[Partition] = (parition_generator(get_mentions(k)) for _ in range(1))
 		yield scoress_average(map(lambda r : get_scores(k,r), R))
-
-
+	
 start = time()
-#print(tmp(scores_all_K(K())))
-gen = scoress_average(score_partitions(K()))
-print(gen)
+#gen = scoress_average(score_partitions(K()))
+mentions = [i for i in range(100)]
+KK = (beta_partition(mentions, 1, 100) for _ in range(1))
+partition_generator = construct_partition#partial(beta_partition, a = 1, b = 1)
+res = scoress_average(score_random_partitions(K(), partition_generator))
 print(time()-start)
+print(res)
 
 #k = clusters_from_json(open('../ancor/json/1AG0141.json'))
 #print(len(k))
