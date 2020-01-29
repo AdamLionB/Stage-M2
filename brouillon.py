@@ -9,7 +9,7 @@ import pathlib
 import os
 from time import time
 from copy import copy
-from typing import List, Set, Callable, Iterator, Tuple, Union, Optional, Dict, Any
+from typing import List, Set, Callable, Iterator, Tuple, Union, Optional, Dict, Any, Generic
 from itertools import zip_longest, cycle, combinations
 from functools import reduce, partial, singledispatchmethod
 from collections import defaultdict
@@ -36,9 +36,17 @@ def kaapa(k: Partition, r: Partition):
 # print(tp_c, tp_n, c_k, n_k, c_r, n_r)
 
 Partition = List[Set]
+"""
+Alias for a list of sets
+"""
 
 
+# TODO vérifier que ça marche
+# TODO opti si nécessaire
 def construct_partition(mentions: List, p=0.01) -> Partition:
+    """
+    Construct a random partition by giving a probability p for each possible link to be created
+    """
     shuffle(mentions)
     partitions: Dict[Any, Set] = {}
     tmp = defaultdict(set)
@@ -55,21 +63,21 @@ def construct_partition(mentions: List, p=0.01) -> Partition:
     return partitions
 
 
-def random_partition(mentions: List, distrib: Callable[[], float]) -> Partition:
+def random_partition(mentions: List, rng: Callable[[], float]) -> Partition:
     """
     Generates a random partitions of mentions.
-    The size of the clusters composing the partitions is randomly drawn following the random
-    generator distrib.
+    The size of the clusters composing the partitions is randomly drawn following the random number
+    generator rng.
     """
     shuffle(mentions)
     partitions = []
     while len(mentions) != 0:
-        y = ceil(distrib() * len(mentions))
+        y = ceil(rng() * len(mentions))
         partitions.append(set(mentions[:y]))
         mentions = mentions[y:]
     return partitions
 
-
+# TODO beta distribution vraiment idéal ?
 def beta_partition(mentions: List, a: float, b: float) -> Partition:
     """
     Generates a random partitions of mentions, which cluster sizes are randomly drawn following a
@@ -79,11 +87,17 @@ def beta_partition(mentions: List, a: float, b: float) -> Partition:
 
 
 def entity_partition(mentions: List) -> Partition:
-    return random_partition(mentions, lambda: 1)
+    """
+    Return the partition constitued of an unique entity
+    """
+    return [{m for m in mentions}] #random_partition(mentions, lambda: 1)
 
 
 def singleton_partition(mentions: List) -> Partition:
-    return random_partition(mentions, lambda: 1 / (len(mentions) + 1))
+    """
+    Return the partition consitued of only singletons
+    """
+    return [{m} for m in mentions] #random_partition(mentions, lambda: 1 / (len(mentions) + 1))
 
 
 class SuchRandom:
@@ -107,6 +121,9 @@ def wow_partition(mentions: List) -> Partition:
 
 
 def get_mentions(partition: Partition) -> List:
+    """
+    Return the list of all mentions in a Partition
+    """
     return [mention for entity in partition for mention in entity]
 
 
@@ -116,17 +133,6 @@ SK_METRICS = {
     'AMI': metrics.adjusted_mutual_info_score,
     'FM': metrics.fowlkes_mallows_score
 }
-
-
-# METRICS['ARI'] = metrics.adjusted_rand_score
-
-
-# k = [{1}, {2}, {3}, {4}, {5, 12, 14}, {6}, {7, 9}, {8}, {10}, {11}, {13}]
-# r1 = [{1}, {2}, {3}, {4, 6}, {5, 12}, {7, 9, 14}, {8}, {10}, {11}, {13}]
-# r2 = [{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}]
-# r3 = [{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}]
-#
-# R = [r1]  # [r1, r2, r3]
 
 
 class Scores:
@@ -228,30 +234,48 @@ def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:
     return e,
 
 
-def partition_to_classif(partition: Partition) -> List:
+def partition_to_sklearn_format(partition: Partition) -> List:
+    """
+    Converts a Partition to the classification format used by sklearn in a pure way
+    examples:
+    [{1}, {4, 3}, {2, 5, 6}} -> [0, 2, 1, 1, 2, 2]
+    """
     tmp = {item: n for n, cluster in enumerate(partition) for item in cluster}
     return [v for k, v in sorted(tmp.items())]
 
 
+# TODO purify
 def get_scores(gold: Partition, sys: Partition) -> Scores:
+    """
+    Computes metrics scores for a (gold, sys) and outputs it as a Scores
+    """
     res = {}
     for name, metric in METRICS.items():
         res[name] = to_tuple(metric(gold, sys))
     res['conll'] = to_tuple(scores.conll2012(gold, sys))
-    gold = partition_to_classif(gold)
-    sys = partition_to_classif(sys)
+    gold = partition_to_sklearn_format(gold)
+    sys = partition_to_sklearn_format(sys)
     for name, metric in SK_METRICS.items():
         res[name] = to_tuple(metric(gold, sys))
     return Scores(res)
 
 
+# TODO generalise for any json format
+# TODO generalise for any format ? (with a given read method)
 def iter_ancor() -> Iterator[Partition]:
+    """
+    Iterates over the ancor corpus
+    """
     for n, file in enumerate(os.listdir('../ancor/json/')):
         # if n > 0 : break
         yield clusters_from_json(open('../ancor/json/' + file))
 
 
+# TODO ça marche ?
 def introduce_randomness(partition: Partition):
+    """
+    randomize the entity of a random mention in the partition
+    """
     size = reduce(lambda x, y: x + len(y), partition, 0)
     old_pos = randint(0, size - 1)
     new_pos = randint(0, size - 1)
@@ -279,12 +303,16 @@ def introduce_randomness(partition: Partition):
     return partition
 
 
+
 def score_random_partitions(
         golds: Iterator[Partition],
-        parition_generator: Callable[[List], Partition]
+        partition_generator: Callable[[List], Partition]
 ) -> Iterator[Scores]:
+    """
+    Computes Scores for a partition against random partition generated with partition_generator
+    """
     for n, k in enumerate(golds):
-        syss: Iterator[Partition] = (parition_generator(get_mentions(k)) for _ in range(1))
+        syss: Iterator[Partition] = (partition_generator(get_mentions(k)) for _ in range(1))
         yield Scores.average(map(lambda r: get_scores(k, r), syss))
 
 
@@ -297,6 +325,8 @@ def score_random_partitions(
 # print(time()-start)
 # print(res)
 
+
+# TODO all test in a similar format ?
 def golds_vs_entity(golds: Iterator[Partition]) -> Tuple[Scores, Scores]:
     return Scores.avg_std(score_random_partitions(golds, entity_partition))
 
@@ -307,3 +337,12 @@ def golds_vs_singleton(golds: Iterator[Partition]) -> Scores:
 
 
 print(golds_vs_entity(iter_ancor()))
+
+
+## exemple blanc
+# k = [{1}, {2}, {3}, {4}, {5, 12, 14}, {6}, {7, 9}, {8}, {10}, {11}, {13}]
+# r1 = [{1}, {2}, {3}, {4, 6}, {5, 12}, {7, 9, 14}, {8}, {10}, {11}, {13}]
+# r2 = [{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}]
+# r3 = [{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}]
+#
+# R = [r1]  # [r1, r2, r3]
