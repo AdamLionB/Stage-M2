@@ -13,6 +13,7 @@ from typing import List, Set, Callable, Iterator, Tuple, Union, Optional, Dict, 
 from itertools import zip_longest, cycle, combinations, chain, islice
 from functools import reduce, partial, singledispatchmethod
 from collections import defaultdict
+from enum import Enum, auto
 import math
 
 sys_lib.path.insert(1, '../scorch')
@@ -87,6 +88,7 @@ def weighted_f1(gold: Partition, sys: Partition) -> Tuple[float, float, float]:
     r = weighted_r(gold, sys)
     p = weighted_p(gold, sys)
     return r, p, 2 * r * p / (r + p) if r + p != 0 else 0
+
 
 # print(tp_c, tp_n, c_k, n_k, c_r, n_r)
 
@@ -289,14 +291,57 @@ class Scores:
 
     def compare(self, other: Scores) -> Scores:
         return Scores({
-            sk: tuple((sign(y - x) for x, y in zip(sv, ov)))
+            sk: tuple((Growth.compare(x,y) for x, y in zip(sv, ov)))
             for (sk, sv), ov in zip(self.dic.items(), other.dic.values())
         })
 
     @staticmethod
     def growth(scoress: Iterator[Scores]) -> Scores:
-        pass
+        res = next(scoress)
+        for scores in scoress:
+            res = res + scores
+        return res
 
+
+class Growth(Enum):
+    STRICT_INCR = auto()
+    INCR = auto()
+    CONST = auto()
+    DECR = auto()
+    STRICT_DECR = auto()
+    NON_MONOTONIC = auto()
+
+    def __add__(self, other: Growth) -> Growth:
+        """
+        ughh...
+        """
+        if self is other:
+            return self
+        if self is Growth.NON_MONOTONIC or other is Growth.NON_MONOTONIC:
+            return Growth.NON_MONOTONIC
+        elif self is Growth.INCR or self is Growth.STRICT_INCR:
+            if other is Growth.DECR or other is Growth.STRICT_DECR:
+                return Growth.NON_MONOTONIC
+            else:
+                return Growth.INCR
+        elif self is Growth.DECR or self is Growth.STRICT_DECR:
+            if other is Growth.INCR or other is Growth.STRICT_INCR:
+                return Growth.NON_MONOTONIC
+            else:
+                return Growth.DECR
+        if other is Growth.DECR or other is Growth.STRICT_DECR:
+            return Growth.DECR
+        else:
+            return Growth.INCR
+
+    def __truediv__(self, other):
+        return self
+
+    @staticmethod
+    def compare(a: float, b: float):
+        if a > b: return Growth.STRICT_DECR
+        if a < b: return Growth.STRICT_INCR
+        return Growth.CONST
 
 
 def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:
@@ -427,29 +472,69 @@ def duplicate_clusters(gold: Partition, sys: Partition) -> Tuple[Partition, Part
     return new_gold, new_sys
 
 
-def scale_test(gold, sys) -> Scores:
+def scale_test(gold: Partition, sys: Partition) -> Scores:
     score_a = evaluate(gold, sys)
     score_b = evaluate(*duplicate_clusters(gold, sys))
     return score_a.compare(score_b)
 
 
-def symetry_test(gold, sys) -> Scores:
+def symetry_test(gold: Partition, sys: Partition) -> Scores:
     scores_a = evaluate(gold, sys)
     scores_b = evaluate(sys, gold)
     return scores_a.compare(scores_b)
 
 
-def randomise_test(test: Callable[[Partition, Partition], Scores]) -> Scores:
-    def intern(m):
+def singleton_test(gold: Partition) -> Scores:
+    return evaluate(gold, singleton_partition(get_mentions(gold)))
+
+
+def entity_test(gold: Partition) -> Scores:
+    return evaluate(gold, entity_partition(get_mentions(gold)))
+
+
+def randomise_test(
+        test: Callable[[Partition, Partition], Scores],
+        std: bool = False
+) -> Union[Tuple[Scores, Scores], Scores]:
+    def intern(m) -> Iterator[Scores]:
         for _ in range(10):
             gold = beta_partition(m, 1, 1)
             sys = beta_partition(m, 1, 1)
             yield test(gold, sys)
     mentions = list(range(100))
-    return Scores.average(intern(mentions))
+    if std:
+        return Scores.avg_std(intern(mentions))
+    else:
+        return Scores.average(intern(mentions))
 
 
+def fixed_gold_test(
+        test: Callable[[Partition], Scores],
+        it: Iterator[Partition],
+        std: bool = False
+) -> Union[Tuple[Scores, Scores], Scores]:
+    if std:
+        return Scores.avg_std(map(test, it))
+    else:
+        return Scores.average(map(test, it))
 
+
+def ancor_test(
+        test: Callable[[Partition], Scores]
+        , std: bool = False
+) -> Union[Tuple[Scores, Scores], Scores]:
+    return fixed_gold_test(test, iter_ancor(), std)
+
+
+def rand_gold_test(
+        test: Callable[[Partition], Scores],
+        std: bool = False
+) -> Union[Tuple[Scores, Scores], Scores]:
+    def intern(m) -> Iterator[Partition]:
+        for _ in range(100):
+            yield beta_partition(m, 1, 1)
+    mentions = list(range(100))
+    return fixed_gold_test(test,intern(mentions), std)
 # print(golds_vs_entity(iter_ancor()))
 
 
@@ -471,24 +556,35 @@ r = [{1}, {2}, {3}, {4, 6}, {5, 12}, {7, 9, 14}, {8}, {10}, {11}, {13}]
 
 ## exemple à la mano
 
-#k = [{1}, {2, 3}, {4, 5, 6}, {13, 14}]
-#r = [{1}, {3}, {2, 4, 5, 6}, {13, 14}]
+# k = [{1}, {2, 3}, {4, 5, 6}, {13, 14}]
+# r = [{1}, {3}, {2, 4, 5, 6}, {13, 14}]
 
 # print(evaluate(k,r))
-#print(scale_test(k, r))
-#print(symetry_test(k, r))
+# print(scale_test(k, r))
+# print(symetry_test(k, r))
 # print(evaluate(k,r))
 
-#print(randomise_test(scale_test))
-#print(randomise_test(symetry_test))
+print(randomise_test(scale_test))
+print(randomise_test(symetry_test))
+print(ancor_test(singleton_test, std=True))
+print(rand_gold_test(singleton_test, std=True))
+print(ancor_test(entity_test, std=True))
+print(rand_gold_test(entity_test, std=True))
+# print(reduce(lambda x, y: x+y, (len(beta_partition(list(range(100)), 1, 1)) for _ in range(100)))/100)
 
-#print(reduce(lambda x, y: x+y, (len(beta_partition(list(range(100)), 1, 1)) for _ in range(100)))/100)
+# dic = {}
+# s = 0
+# for partition in iter_ancor():
+#     for cluster in partition:
+#         s+= len(cluster)
+#          #dic.setdefault(len(cluster), 0)
+#          #dic[len(cluster)] +=1
+#
+# print(s/455)
+# for k, v in sorted(dic.items()):
+#     print(k,v)
 
-dic = {}
-for partition in iter_ancor():
-    for cluster in partition:
-        dic.setdefault(len(cluster), 0)
-        dic[len(cluster)] +=1
-
-for k, v in sorted(dic.items()):
-    print(k,v)
+# print(reduce(lambda x,y : x+y,(len(construct_partition(list(range(100)),1/28)) for _ in range(100)))/100)
+# print(x)
+# print(len(x))
+# print(construct_partition(list(range(100)),1/28))
