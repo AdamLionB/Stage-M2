@@ -195,12 +195,6 @@ SK_METRICS = {
 }
 
 
-def sign(x: float):
-    if x > 0: return 1
-    if x < 0: return 1
-    return 0
-
-
 class Scores:
     """
     Dictionnary linking a str as key to a tuple of values
@@ -209,7 +203,7 @@ class Scores:
     def __init__(self, dic: Dict[str, Tuple[float, ...]]):
         self.dic = dic
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: str) -> Tuple[float, ...]:
         return self.dic[item]
 
     def __add__(self, other: Scores) -> Scores:
@@ -274,7 +268,7 @@ class Scores:
         res = next(scoress)
         count = 1
         for scores in scoress:
-            res = res + scores
+            res += scores
             count += 1
         return res / count
 
@@ -295,22 +289,21 @@ class Scores:
 
     def compare(self, other: Scores) -> Scores:
         return Scores({
-            sk: tuple((Growth.compare(x,y) for x, y in zip(sv, ov)))
+            sk: tuple((Growth.compare(x, y) for x, y in zip(sv, ov)))
             for (sk, sv), ov in zip(self.dic.items(), other.dic.values())
         })
 
     def compare_t(self, t: Tuple) -> Scores:
         return Scores({
             k: reversed(tuple((Growth.compare(x, y) for x, y in zip(v[::-1], t[::-1]))))
-            for k,v in self.dic.items()
+            for k, v in self.dic.items()
         })
-
 
     @staticmethod
     def growth(scoress: Iterator[Scores]) -> Scores:
         res = next(scoress)
         for scores in scoress:
-            res = res + scores
+            res += scores
         return res
 
 
@@ -345,13 +338,15 @@ class Growth(Enum):
         else:
             return Growth.INCR
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: Any):
         return self
 
     @staticmethod
     def compare(a: float, b: float):
-        if a > b: return Growth.STRICT_DECR
-        if a < b: return Growth.STRICT_INCR
+        if a > b:
+            return Growth.STRICT_DECR
+        if a < b:
+            return Growth.STRICT_INCR
         return Growth.CONST
 
 
@@ -474,7 +469,8 @@ def duplicate_clusters(gold: Partition, sys: Partition) -> Tuple[Partition, Part
     new_mentions = {}
     cast = type(mentions[0])
     for m in mentions:
-        while (r := cast(randint(-1e6, 1e6))) in mentions or r in new_mentions: pass
+        while (r := cast(randint(-1e6, 1e6))) in mentions or r in new_mentions:
+            pass
         new_mentions[m] = r
     it = chain(iter(mentions), (new_mentions[m] for m in mentions))
     new_gold = [{next(it) for _ in c} for c in chain(gold, gold)]
@@ -508,8 +504,7 @@ def identity_test(gold: Partition) -> Scores:
 
 
 def triangle_test(a: Partition, b: Partition, c: Partition) -> Scores:
-    return Scores.compare(evaluate(a,c), evaluate(a,b) + evaluate(b,c))
-
+    return Scores.compare(evaluate(a, c), evaluate(a, b) + evaluate(b, c))
 
 
 def true_test(gold: Partition, sys: Partition) -> Scores:
@@ -518,10 +513,9 @@ def true_test(gold: Partition, sys: Partition) -> Scores:
     return a.compare_t(t)
 
 
-
 def r_test(
         test: Callable[[Partition, ...], Scores],
-        std: bool= False
+        std: bool = False
 ) -> Union[Tuple[Scores, Scores], Scores]:
     def intern(m) -> Iterator[Scores]:
         n = len(signature(test).parameters)
@@ -553,8 +547,8 @@ def fixed_gold_test(
 
 
 def ancor_test(
-        test: Callable[[Partition], Scores]
-        , std: bool = False
+        test: Callable[[Partition], Scores],
+        std: bool = False
 ) -> Union[Tuple[Scores, Scores], Scores]:
     return fixed_gold_test(test, iter_ancor(), std)
 
@@ -562,35 +556,28 @@ def ancor_test(
 # print(golds_vs_entity(iter_ancor()))
 
 
-## exemple blanc
-k = [{1}, {2}, {3}, {4}, {5, 12, 14}, {6}, {7, 9}, {8}, {10}, {11}, {13}]
-r = [{1}, {2}, {3}, {4, 6}, {5, 12}, {7, 9, 14}, {8}, {10}, {11}, {13}]
+# exemple blanc
+# k = [{1}, {2}, {3}, {4}, {5, 12, 14}, {6}, {7, 9}, {8}, {10}, {11}, {13}]
+# r = [{1}, {2}, {3}, {4, 6}, {5, 12}, {7, 9, 14}, {8}, {10}, {11}, {13}]
 # r2 = [{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}]
 # r3 = [{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}]
 #
 # R = [r1]  # [r1, r2, r3]
 
 
-##  exemple lea
+# exemple lea
 # k = [{'a', 'b', 'c'}, {'d', 'e', 'f', 'g'}]
 # r = [{'a', 'b'}, {'c', 'd'},{'f', 'g', 'h', 'i'}]
 
-#
-# print(evaluate(k, r))
 
-## exemple à la mano
-
+# exemple à la mano
 # k = [{1}, {2, 3}, {4, 5, 6}, {13, 14}]
 # r = [{1}, {3}, {2, 4, 5, 6}, {13, 14}]
 
-# print(evaluate(k,r))
-# print(scale_test(k, r))
-# print(symetry_test(k, r))
-# print(evaluate(k,r))
 
 print(scale_test, '\n', r_test(scale_test))
 print(symetry_test, '\n', r_test(symetry_test))
-#print(ancor_test(singleton_test, std=True))
+# print(ancor_test(singleton_test, std=True))
 print(entity_test, '\n', ancor_test(entity_test, std=True))
 print(singleton_test, '\n', r_test(singleton_test, std=False))
 print(entity_test, '\n', r_test(entity_test, std=False))
