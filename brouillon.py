@@ -14,6 +14,7 @@ from itertools import zip_longest, cycle, combinations, chain, islice
 from functools import reduce, partial, singledispatchmethod
 from collections import defaultdict
 from enum import Enum, auto
+from inspect import signature
 import math
 
 sys_lib.path.insert(1, '../scorch')
@@ -208,6 +209,9 @@ class Scores:
     def __init__(self, dic: Dict[str, Tuple[float, ...]]):
         self.dic = dic
 
+    def __getitem__(self, item):
+        return self.dic[item]
+
     def __add__(self, other: Scores) -> Scores:
         """
         Adds two Scores together and output resulting score in a pure way.
@@ -294,6 +298,13 @@ class Scores:
             sk: tuple((Growth.compare(x,y) for x, y in zip(sv, ov)))
             for (sk, sv), ov in zip(self.dic.items(), other.dic.values())
         })
+
+    def compare_t(self, t: Tuple) -> Scores:
+        return Scores({
+            k: reversed(tuple((Growth.compare(x, y) for x, y in zip(v[::-1], t[::-1]))))
+            for k,v in self.dic.items()
+        })
+
 
     @staticmethod
     def growth(scoress: Iterator[Scores]) -> Scores:
@@ -492,15 +503,31 @@ def entity_test(gold: Partition) -> Scores:
     return evaluate(gold, entity_partition(get_mentions(gold)))
 
 
-def randomise_test(
-        test: Callable[[Partition, Partition], Scores],
-        std: bool = False
+def identity_test(gold: Partition) -> Scores:
+    return evaluate(gold, gold)
+
+
+def triangle_test(a: Partition, b: Partition, c: Partition) -> Scores:
+    return Scores.compare(evaluate(a,c), evaluate(a,b) + evaluate(b,c))
+
+
+
+def true_test(gold: Partition, sys: Partition) -> Scores:
+    a = evaluate(gold, sys)
+    t = a['true']
+    return a.compare_t(t)
+
+
+
+def r_test(
+        test: Callable[[Partition, ...], Scores],
+        std: bool= False
 ) -> Union[Tuple[Scores, Scores], Scores]:
     def intern(m) -> Iterator[Scores]:
+        n = len(signature(test).parameters)
         for _ in range(10):
-            gold = beta_partition(m, 1, 1)
-            sys = beta_partition(m, 1, 1)
-            yield test(gold, sys)
+            a = (beta_partition(m, 1, 1) for _ in range(n))
+            yield test(*a)
     mentions = list(range(100))
     if std:
         return Scores.avg_std(intern(mentions))
@@ -509,14 +536,20 @@ def randomise_test(
 
 
 def fixed_gold_test(
-        test: Callable[[Partition], Scores],
+        test: Callable[[Partition, ...], Scores],
         it: Iterator[Partition],
         std: bool = False
 ) -> Union[Tuple[Scores, Scores], Scores]:
+    def intern() -> Iterator[Scores]:
+        n = len(signature(test).parameters)-1
+        for gold in it:
+            m = get_mentions(gold)
+            a = (beta_partition(m, 1, 1) for _ in range(n))
+            yield test(gold, *a)
     if std:
-        return Scores.avg_std(map(test, it))
+        return Scores.avg_std(intern())
     else:
-        return Scores.average(map(test, it))
+        return Scores.average(intern())
 
 
 def ancor_test(
@@ -526,15 +559,6 @@ def ancor_test(
     return fixed_gold_test(test, iter_ancor(), std)
 
 
-def rand_gold_test(
-        test: Callable[[Partition], Scores],
-        std: bool = False
-) -> Union[Tuple[Scores, Scores], Scores]:
-    def intern(m) -> Iterator[Partition]:
-        for _ in range(100):
-            yield beta_partition(m, 1, 1)
-    mentions = list(range(100))
-    return fixed_gold_test(test,intern(mentions), std)
 # print(golds_vs_entity(iter_ancor()))
 
 
@@ -564,12 +588,15 @@ r = [{1}, {2}, {3}, {4, 6}, {5, 12}, {7, 9, 14}, {8}, {10}, {11}, {13}]
 # print(symetry_test(k, r))
 # print(evaluate(k,r))
 
-print(randomise_test(scale_test))
-print(randomise_test(symetry_test))
-print(ancor_test(singleton_test, std=True))
-print(rand_gold_test(singleton_test, std=True))
-print(ancor_test(entity_test, std=True))
-print(rand_gold_test(entity_test, std=True))
+print(scale_test, '\n', r_test(scale_test))
+print(symetry_test, '\n', r_test(symetry_test))
+#print(ancor_test(singleton_test, std=True))
+print(entity_test, '\n', ancor_test(entity_test, std=True))
+print(singleton_test, '\n', r_test(singleton_test, std=False))
+print(entity_test, '\n', r_test(entity_test, std=False))
+print(triangle_test, '\n', r_test(triangle_test))
+print(identity_test, '\n', r_test(identity_test))
+print(true_test, '\n',  r_test(true_test))
 # print(reduce(lambda x, y: x+y, (len(beta_partition(list(range(100)), 1, 1)) for _ in range(100)))/100)
 
 # dic = {}
