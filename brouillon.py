@@ -15,6 +15,10 @@ from functools import reduce, partial, singledispatchmethod
 from collections import defaultdict
 from enum import Enum, auto
 from inspect import signature
+
+from find_better_name import Scores, evaluate
+from partition_utils import Partition, beta_partition, entity_partition, singleton_partition, get_mentions
+from testes import symetry_test, singleton_test, entity_test, r_test, ancor_test
 import math
 
 sys_lib.path.insert(1, '../scorch')
@@ -93,11 +97,6 @@ def weighted_f1(gold: Partition, sys: Partition) -> Tuple[float, float, float]:
 
 # print(tp_c, tp_n, c_k, n_k, c_r, n_r)
 
-T = TypeVar('T')
-Partition = List[Set[T]]
-"""
-Alias for a list of sets all composed of a same T type object.
-"""
 
 
 # TODO vérifier que ça marche
@@ -122,44 +121,6 @@ def construct_partition(mentions: List, p=0.01) -> Partition:
     return partitions
 
 
-def random_partition(mentions: List, rng: Callable[[], float]) -> Partition:
-    """
-    Generates a random partitions of mentions.
-    The size of the clusters composing the partitions is randomly drawn following the random number
-    generator rng.
-    """
-    shuffle(mentions)
-    partitions = []
-    while len(mentions) != 0:
-        y = ceil(rng() * len(mentions))
-        partitions.append(set(mentions[:y]))
-        mentions = mentions[y:]
-    return partitions
-
-
-# TODO beta distribution vraiment idéal ?
-def beta_partition(mentions: List, a: float, b: float) -> Partition:
-    """
-    Generates a random partitions of mentions, which cluster sizes are randomly drawn following a
-    beta distribution of parameter a, b.
-    """
-    return random_partition(mentions, beta(a, b).rvs)
-
-
-def entity_partition(mentions: List) -> Partition:
-    """
-    Return the partition constitued of an unique entity
-    """
-    return [{m for m in mentions}]  # random_partition(mentions, lambda: 1)
-
-
-def singleton_partition(mentions: List) -> Partition:
-    """
-    Return the partition consitued of only singletons
-    """
-    return [{m} for m in mentions]  # random_partition(mentions, lambda: 1 / (len(mentions) + 1))
-
-
 class SuchRandom:
     def __init__(self: SuchRandom):
         self.seed = cycle([1, 2, 3, 4])
@@ -180,247 +141,10 @@ def wow_partition(mentions: List) -> Partition:
     return cluster
 
 
-def get_mentions(partition: Partition) -> List[T]:
-    """
-    Return the list of all mentions in a Partition
-    """
-    return [mention for entity in partition for mention in entity]
 
 
-SK_METRICS = {
-    'ARI': metrics.adjusted_rand_score,
-    'HCV': metrics.homogeneity_completeness_v_measure,
-    'AMI': metrics.adjusted_mutual_info_score,
-    'FM': metrics.fowlkes_mallows_score
-}
 
 
-class Scores:
-    """
-    Dictionnary linking a str as key to a tuple of values
-    """
-
-    def __init__(self, dic: Dict[str, Tuple[float, ...]]):
-        self.dic = dic
-
-    def __getitem__(self, item: str) -> Tuple[float, ...]:
-        return self.dic[item]
-
-    def __add__(self, other: Scores) -> Scores:
-        """
-        Adds two Scores together and output resulting score in a pure way.
-        """
-        return Scores({
-            sk: tuple((x + y for x, y in zip(sv, ov)))
-            for (sk, sv), ov in zip(self.dic.items(), other.dic.values())
-        })
-
-    def __sub__(self, other: Scores) -> Scores:
-        """
-        Substract the other Scores to self and output resulting Scores in a pure way.
-        """
-        return Scores({
-            sk: tuple((x - y for x, y in zip(sv, ov)))
-            for (sk, sv), ov in zip(self.dic.items(), other.dic.values())
-        })
-
-    def __mul__(self, scalar: float) -> Scores:
-        """
-        Multiply a Scores by a scalar and output the resulting Scores in a pure way.
-        """
-        return Scores({
-            k: tuple((x * scalar for x in v))
-            for k, v in self.dic.items()
-        })
-
-    def __truediv__(self, scalar: float) -> Scores:
-        """
-        Divides a Scores by a scalar and output the resulting Scores in a pure way.
-        """
-        return Scores({
-            k: tuple((x / scalar for x in v))
-            for k, v in self.dic.items()
-        })
-
-    def __pow__(self, power: float, modulo=None):
-        """
-        Raise a Scores to the given power and output the resulting Scores in a pure way.
-        """
-        return Scores({
-            k: tuple((x ** power for x in v))
-            for k, v in self.dic.items()
-        })
-
-    def __str__(self) -> str:
-        res = '\t\tF\tP\tR'
-        for k, v in self.dic.items():
-            res += f'\n{k}\t:'
-            for e in reversed(v):
-                if issubclass(type(e),float):
-                    res += f'\t{e:.2f}'
-                else:
-                    res += f'\t{e}'
-        return res
-
-    def __repr__(self) -> str:
-        return str(self)
-
-    @staticmethod
-    def average(scoress: Iterator[Scores]) -> Scores:
-        """
-        Consume a Scores' iterator and output its average Scores.
-        """
-        res = next(scoress)
-        count = 1
-        for scores in scoress:
-            res += scores
-            count += 1
-        return res / count
-
-    @staticmethod
-    def avg_std(scoress: Iterator[Scores]) -> Tuple[Scores, Scores]:
-        """
-        Consume a Scores' iterator and output its average and standard deviation Scores.
-        """
-        regular_sum = next(scoress)
-        squared_sum = regular_sum ** 2
-        count = 1
-        for scores in scoress:
-            regular_sum += scores
-            squared_sum += scores ** 2
-            count += 1
-        return (regular_sum / count,
-                ((squared_sum * count - regular_sum ** 2) / (count * (count - 1))) ** (1 / 2))
-
-    def compare(self, other: Scores) -> Scores:
-        return Scores({
-            sk: tuple((Growth.compare(x, y) for x, y in zip(sv, ov)))
-            for (sk, sv), ov in zip(self.dic.items(), other.dic.values())
-        })
-
-    def compare_t(self, t: Tuple) -> Scores:
-        return Scores({
-            k: reversed(tuple((Growth.compare(x, y) for x, y in zip(v[::-1], t[::-1]))))
-            for k, v in self.dic.items()
-        })
-
-    @staticmethod
-    def growth(scoress: Iterator[Scores]) -> Scores:
-        res = next(scoress)
-        for scores in scoress:
-            res += scores
-        return res
-
-
-class Growth(Enum):
-    STRICT_INCR = auto()
-    INCR = auto()
-    CONST = auto()
-    DECR = auto()
-    STRICT_DECR = auto()
-    NON_MONOTONIC = auto()
-
-    def __add__(self, other: Growth) -> Growth:
-        """
-        ughh...
-        """
-        if self is other:
-            return self
-        if self is Growth.NON_MONOTONIC or other is Growth.NON_MONOTONIC:
-            return Growth.NON_MONOTONIC
-        elif self is Growth.INCR or self is Growth.STRICT_INCR:
-            if other is Growth.DECR or other is Growth.STRICT_DECR:
-                return Growth.NON_MONOTONIC
-            else:
-                return Growth.INCR
-        elif self is Growth.DECR or self is Growth.STRICT_DECR:
-            if other is Growth.INCR or other is Growth.STRICT_INCR:
-                return Growth.NON_MONOTONIC
-            else:
-                return Growth.DECR
-        if other is Growth.DECR or other is Growth.STRICT_DECR:
-            return Growth.DECR
-        else:
-            return Growth.INCR
-
-    def __truediv__(self, other: Any):
-        return self
-
-    def __repr__(self) -> str:
-        return str(self)
-
-    def __str__(self) -> str:
-        if self is Growth.CONST:
-            return '='
-        if self is Growth.NON_MONOTONIC:
-            return '~'
-        if self is Growth.INCR:
-            return '+'
-        if self is Growth.STRICT_INCR:
-            return '++'
-        if self is Growth.DECR:
-            return '-'
-        if self is Growth.STRICT_DECR:
-            return '--'
-
-
-    @staticmethod
-    def compare(a: float, b: float):
-        if a > b:
-            return Growth.STRICT_DECR
-        if a < b:
-            return Growth.STRICT_INCR
-        return Growth.CONST
-
-
-def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:
-    """
-    Output the input as tuple in a pure way.
-    If the input was a tuple, return it. If it wasn't, puts it in a tuple then return it.
-    """
-    if type(e) == tuple:
-        return e
-    return e,
-
-
-def partition_to_sklearn_format(partition: Partition) -> List:
-    """
-    Converts a Partition to the classification format used by sklearn in a pure way
-    examples:
-    [{1}, {4, 3}, {2, 5, 6}} -> [0, 2, 1, 1, 2, 2]
-    """
-    tmp = {item: n for n, cluster in enumerate(partition) for item in cluster}
-    return [v for k, v in sorted(tmp.items())]
-
-
-# TODO purify
-def evaluate(gold: Partition, sys: Partition) -> Scores:
-    """
-    Computes metrics scores for a (gold, sys) and outputs it as a Scores
-    """
-    res = {}
-    for name, metric in METRICS.items():
-        res[name] = to_tuple(metric(gold, sys))
-    res['conll'] = to_tuple(scores.conll2012(gold, sys))
-    res['true'] = to_tuple(true_f1(gold, sys))
-    res['w'] = to_tuple(weighted_f1(gold, sys))
-    gold = partition_to_sklearn_format(gold)
-    sys = partition_to_sklearn_format(sys)
-    if len(gold) == len(sys):
-        for name, metric in SK_METRICS.items():
-            res[name] = to_tuple(metric(gold, sys))
-    return Scores(res)
-
-
-# TODO generalise for any json format
-# TODO generalise for any format ? (with a given read method)
-def iter_ancor() -> Iterator[Partition]:
-    """
-    Iterates over the ancor corpus
-    """
-    for n, file in enumerate(os.listdir('../ancor/json/')):
-        # if n > 0 : break
-        yield clusters_from_json(open('../ancor/json/' + file))
 
 
 # TODO ça marche ?
@@ -508,86 +232,18 @@ def scale_test(gold: Partition, sys: Partition) -> Scores:
     return score_a.compare(score_b)
 
 
-def symetry_test(gold: Partition, sys: Partition) -> Scores:
-    scores_a = evaluate(gold, sys)
-    scores_b = evaluate(sys, gold)
-    return scores_a.compare(scores_b)
-
-
-def singleton_test(gold: Partition) -> Scores:
-    return evaluate(gold, singleton_partition(get_mentions(gold)))
-
-
-def entity_test(gold: Partition) -> Scores:
-    return evaluate(gold, entity_partition(get_mentions(gold)))
-
-
-def identity_test(gold: Partition) -> Scores:
-    return evaluate(gold, gold)
-
-
-def triangle_test(a: Partition, b: Partition, c: Partition) -> Scores:
-    return Scores.compare(evaluate(a, c), evaluate(a, b) + evaluate(b, c))
-
-
 def true_test(gold: Partition, sys: Partition) -> Scores:
     a = evaluate(gold, sys)
     t = a['true']
     return a.compare_t(t)
 
 
-def r_test(
-        test: Callable[[Partition, ...], Scores],
-        partition_generators: Tuple[Callable[[list], Partition], ...] = None,
-        std: bool = False
-) -> Union[Tuple[Scores, Scores], Scores]:
-    def intern(m) -> Iterator[Scores]:
-        n = len(signature(test).parameters)
-        for _ in range(10):
-            if partition_generators is None:
-                a = (beta_partition(m, 1, 1) for _ in range(n))
-            else:
-                if len(partition_generators) != n:
-                    # TODO exception
-                    raise Exception()
-                a = (part() for part in partition_generators)
-            yield test(*a)
-    mentions = list(range(100))
-    if std:
-        return Scores.avg_std(intern(mentions))
-    else:
-        return Scores.average(intern(mentions))
 
 
-def fixed_gold_test(
-        test: Callable[[Partition, ...], Scores],
-        it: Iterator[Partition],
-        partition_generators: Tuple[Callable[[list], Partition], ...] = None,
-        std: bool = False
-) -> Union[Tuple[Scores, Scores], Scores]:
-    def intern() -> Iterator[Scores]:
-        n = len(signature(test).parameters)-1
-        for gold in it:
-            m = get_mentions(gold)
-            if partition_generators is None:
-                a = (beta_partition(m, 1, 1) for _ in range(n))
-            else:
-                if len(partition_generators) != n:
-                    # TODO exception
-                    raise Exception()
-                a = (part() for part in partition_generators)
-            yield test(gold, *a)
-    if std:
-        return Scores.avg_std(intern())
-    else:
-        return Scores.average(intern())
 
 
-def ancor_test(
-        test: Callable[[Partition], Scores],
-        std: bool = False
-) -> Union[Tuple[Scores, Scores], Scores]:
-    return fixed_gold_test(test, iter_ancor(), std)
+
+
 
 # exemple blanc
 # k = [{1}, {2}, {3}, {4}, {5, 12, 14}, {6}, {7, 9}, {8}, {10}, {11}, {13}]
@@ -609,11 +265,11 @@ def ancor_test(
 
 
 # print(scale_test, '\n', r_test(scale_test))
-# print(symetry_test, '\n', r_test(symetry_test))
+print(symetry_test, '\n', r_test(symetry_test))
 # print(singleton_test, '\n', ancor_test(singleton_test, std=True))
-# print(entity_test, '\n', ancor_test(entity_test, std=True))
+print(entity_test, '\n', ancor_test(entity_test, std=True))
 # print(singleton_test, '\n', r_test(singleton_test, std=False))
-# print(entity_test, '\n', r_test(entity_test, std=False))
+print(entity_test, '\n', r_test(entity_test, std=False))
 # print(triangle_test, '\n', r_test(triangle_test))
 # print(identity_test, '\n', r_test(identity_test))
 # print(true_test, '\n',  r_test(true_test))
