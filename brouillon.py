@@ -252,9 +252,14 @@ class Scores:
         })
 
     def __str__(self) -> str:
-        res = ''
+        res = '\t\tF\tP\tR'
         for k, v in self.dic.items():
-            res += f'{k}\t: {v}\n'
+            res += f'\n{k}\t:'
+            for e in reversed(v):
+                if issubclass(type(e),float):
+                    res += f'\t{e:.2f}'
+                else:
+                    res += f'\t{e}'
         return res
 
     def __repr__(self) -> str:
@@ -340,6 +345,24 @@ class Growth(Enum):
 
     def __truediv__(self, other: Any):
         return self
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    def __str__(self) -> str:
+        if self is Growth.CONST:
+            return '='
+        if self is Growth.NON_MONOTONIC:
+            return '~'
+        if self is Growth.INCR:
+            return '+'
+        if self is Growth.STRICT_INCR:
+            return '++'
+        if self is Growth.DECR:
+            return '-'
+        if self is Growth.STRICT_DECR:
+            return '--'
+
 
     @staticmethod
     def compare(a: float, b: float):
@@ -515,12 +538,19 @@ def true_test(gold: Partition, sys: Partition) -> Scores:
 
 def r_test(
         test: Callable[[Partition, ...], Scores],
+        partition_generators: Tuple[Callable[[list], Partition], ...] = None,
         std: bool = False
 ) -> Union[Tuple[Scores, Scores], Scores]:
     def intern(m) -> Iterator[Scores]:
         n = len(signature(test).parameters)
         for _ in range(10):
-            a = (beta_partition(m, 1, 1) for _ in range(n))
+            if partition_generators is None:
+                a = (beta_partition(m, 1, 1) for _ in range(n))
+            else:
+                if len(partition_generators) != n:
+                    # TODO exception
+                    raise Exception()
+                a = (part() for part in partition_generators)
             yield test(*a)
     mentions = list(range(100))
     if std:
@@ -532,13 +562,20 @@ def r_test(
 def fixed_gold_test(
         test: Callable[[Partition, ...], Scores],
         it: Iterator[Partition],
+        partition_generators: Tuple[Callable[[list], Partition], ...] = None,
         std: bool = False
 ) -> Union[Tuple[Scores, Scores], Scores]:
     def intern() -> Iterator[Scores]:
         n = len(signature(test).parameters)-1
         for gold in it:
             m = get_mentions(gold)
-            a = (beta_partition(m, 1, 1) for _ in range(n))
+            if partition_generators is None:
+                a = (beta_partition(m, 1, 1) for _ in range(n))
+            else:
+                if len(partition_generators) != n:
+                    # TODO exception
+                    raise Exception()
+                a = (part() for part in partition_generators)
             yield test(gold, *a)
     if std:
         return Scores.avg_std(intern())
@@ -551,10 +588,6 @@ def ancor_test(
         std: bool = False
 ) -> Union[Tuple[Scores, Scores], Scores]:
     return fixed_gold_test(test, iter_ancor(), std)
-
-
-# print(golds_vs_entity(iter_ancor()))
-
 
 # exemple blanc
 # k = [{1}, {2}, {3}, {4}, {5, 12, 14}, {6}, {7, 9}, {8}, {10}, {11}, {13}]
@@ -575,15 +608,15 @@ def ancor_test(
 # r = [{1}, {3}, {2, 4, 5, 6}, {13, 14}]
 
 
-print(scale_test, '\n', r_test(scale_test))
-print(symetry_test, '\n', r_test(symetry_test))
-# print(ancor_test(singleton_test, std=True))
-print(entity_test, '\n', ancor_test(entity_test, std=True))
-print(singleton_test, '\n', r_test(singleton_test, std=False))
-print(entity_test, '\n', r_test(entity_test, std=False))
-print(triangle_test, '\n', r_test(triangle_test))
-print(identity_test, '\n', r_test(identity_test))
-print(true_test, '\n',  r_test(true_test))
+# print(scale_test, '\n', r_test(scale_test))
+# print(symetry_test, '\n', r_test(symetry_test))
+# print(singleton_test, '\n', ancor_test(singleton_test, std=True))
+# print(entity_test, '\n', ancor_test(entity_test, std=True))
+# print(singleton_test, '\n', r_test(singleton_test, std=False))
+# print(entity_test, '\n', r_test(entity_test, std=False))
+# print(triangle_test, '\n', r_test(triangle_test))
+# print(identity_test, '\n', r_test(identity_test))
+# print(true_test, '\n',  r_test(true_test))
 # print(reduce(lambda x, y: x+y, (len(beta_partition(list(range(100)), 1, 1)) for _ in range(100)))/100)
 
 # dic = {}
@@ -602,3 +635,17 @@ print(true_test, '\n',  r_test(true_test))
 # print(x)
 # print(len(x))
 # print(construct_partition(list(range(100)),1/28))
+
+
+# for gold in iter_ancor():
+#     rc_wn = 0
+#     n_mentions = 0
+#     for entity in gold:
+#         rc_wn += (len(entity) * (len(entity) - 1)) / 2
+#         n_mentions += len(entity)
+#     L = (n_mentions * (n_mentions - 1)) / 2
+#     wc_rn = L - rc_wn
+#     print(L, rc_wn, wc_rn)
+#     e = (rc_wn + wc_rn) / L
+#     print(METRICS['BLANC'](gold, beta_partition(get_mentions(gold), 1, 1)))
+#     break
