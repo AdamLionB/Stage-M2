@@ -3,6 +3,7 @@ from __future__ import annotations
 # std libs
 from typing import Tuple, Dict, Iterator, Union, Any
 from enum import Enum, auto
+from itertools import zip_longest
 
 # other libs
 from sklearn import metrics
@@ -14,7 +15,6 @@ from scorch.scores import conll2012
 # this lib
 from partition_utils import partition_to_sklearn_format, Partition
 
-
 METRICS['conll'] = conll2012
 SK_METRICS = {
     'ARI': metrics.adjusted_rand_score,
@@ -23,65 +23,113 @@ SK_METRICS = {
     'FM': metrics.fowlkes_mallows_score
 }
 
+
 # TODO rename ?
-class Scores:
+class ScoreHolder:
     """
-    Dictionnary linking a str as key to a tuple of values
+    A structure holding scores in a dict.
+    Each key of the dic is the name of a metric,
+    the tuples associated to each key are the values returned by the metric.
+    The order in which the metrics are computed and thus added in the dictionnary is important
+    since in python dictionnary views are in fact ordered. (kinda)
     """
 
-    def __init__(self, dic: Dict[str, Tuple[float, ...]]):
+    def __init__(self, dic: Dict[str, Tuple[Any, ...]]):
         self.dic = dic
 
-    def __getitem__(self, item: str) -> Tuple[float, ...]:
+    def __getitem__(self, item: str) -> Tuple[Any, ...]:
         return self.dic[item]
 
-    def __add__(self, other: Scores) -> Scores:
+    def __eq__(self, other: ScoreHolder) -> bool:
         """
-        Adds two Scores together and output resulting score in a pure way.
+        Checks if two ScoreHolder are equal.
+        To be considered equals two ScoreHolder have to have:
+        The same keys in the same order and the same tuple for each keys
         """
-        return Scores({
+        if len(self.dic) != len(other.dic):
+            return False
+        for (sk, sv), (ok, ov) in zip(self.dic.items(), other.dic.items()):
+            if sk != ok:
+                return False
+            if len(sv) != len(ov):
+                return False
+            for x, y in zip(sv, ov):
+                if x != y:
+                    return False
+        return True
+
+    def __add__(self, other: ScoreHolder) -> ScoreHolder:
+        """
+        Outputs the result of the addition of two ScoreHolder.
+        For two ScoreHolder to be added they have to have the same structure,
+        meanings the same keys, in the same order and tuples of similar size for each key
+
+        Example:
+
+        >>> ScoreHolder({'a': (1.0,), 'b': (1.0, 2.0)}) + ScoreHolder({'a': (3.0,), 'b': (4.0, 5.0)})
+        is valid
+        >>> ScoreHolder({'a': (1.0,), 'b': (1.0,)}) + ScoreHolder({'a': (3.0,), 'b': (4.0, 5.0)})
+        isn't
+        >>> ScoreHolder({'a': (1.0,), 'c': (1.0, 2.0)}) + ScoreHolder({'a': (3.0,), 'b': (4.0, 5.0)})
+        isn't
+        """
+        return ScoreHolder({
             sk: tuple((x + y for x, y in zip(sv, ov)))
             for (sk, sv), ov in zip(self.dic.items(), other.dic.values())
         })
 
-    def __sub__(self, other: Scores) -> Scores:
+    def __sub__(self, other: ScoreHolder) -> ScoreHolder:
         """
-        Substract the other Scores to self and output resulting Scores in a pure way.
+        Outputs the result of the substraction of a ScoreHolder by another.
+        For two ScoreHolder to be substracted they have to have the same structure,
+        meanings the same keys, in the same order and tuples of similar size for each key
+
+        Example:
+
+        >>> ScoreHolder({'a': (1.0,), 'b': (1.0, 2.0)}) - ScoreHolder({'a': (3.0,), 'b': (4.0, 5.0)})
+        is valid
+        >>> ScoreHolder({'a': (1.0,), 'b': (1.0,)}) - ScoreHolder({'a': (3.0,), 'b': (4.0, 5.0)})
+        isn't
+        >>> ScoreHolder({'a': (1.0,), 'c': (1.0, 2.0)}) - ScoreHolder({'a': (3.0,), 'b': (4.0, 5.0)})
+        isn't
         """
-        return Scores({
+        return ScoreHolder({
             sk: tuple((x - y for x, y in zip(sv, ov)))
             for (sk, sv), ov in zip(self.dic.items(), other.dic.values())
         })
 
-    def __mul__(self, scalar: float) -> Scores:
+    def __mul__(self, scalar: float) -> ScoreHolder:
         """
-        Multiply a Scores by a scalar and output the resulting Scores in a pure way.
+        Outputs the result of the multiplication of a ScoreHolder by a scalar.
+        Each value of the ScoreHolder is multiplied by the scalar.
         """
-        return Scores({
+        return ScoreHolder({
             k: tuple((x * scalar for x in v))
             for k, v in self.dic.items()
         })
 
-    def __truediv__(self, scalar: float) -> Scores:
+    def __truediv__(self, scalar: float) -> ScoreHolder:
         """
-        Divides a Scores by a scalar and output the resulting Scores in a pure way.
+        Outputs the result of the division of a ScoreHolder by a scalar.
+        Eeach value of the ScoreHolder is divided by the scalar.
         """
-        return Scores({
+        return ScoreHolder({
             k: tuple((x / scalar for x in v))
             for k, v in self.dic.items()
         })
 
     def __pow__(self, power: float, modulo=None):
         """
-        Raise a Scores to the given power and output the resulting Scores in a pure way.
+        Outputs the result of raising a ScoreHolder to a given power.
+        Each value of the ScoreHolder is raised to the given power.
         """
-        return Scores({
+        return ScoreHolder({
             k: tuple((x ** power for x in v))
             for k, v in self.dic.items()
         })
 
     def __str__(self) -> str:
-        res = '\t\tF\tP\tR'
+        res = '\n\t\tF\tP\tR'
         for k, v in self.dic.items():
             res += f'\n{k}\t:'
             for e in reversed(v):
@@ -95,9 +143,11 @@ class Scores:
         return str(self)
 
     @staticmethod
-    def average(scoress: Iterator[Scores]) -> Scores:
+    def average(scoress: Iterator[ScoreHolder]) -> ScoreHolder:
         """
-        Consume a Scores' iterator and output its average Scores.
+        Outputs the average ScoreHolder of an iterator.
+        All of the ScoreHolder in the iterator have to have the same strucutre,
+        meanings the same keys, in the same order and tuples of similar size for each key
         """
         res = next(scoress)
         count = 1
@@ -107,9 +157,11 @@ class Scores:
         return res / count
 
     @staticmethod
-    def avg_std(scoress: Iterator[Scores]) -> Tuple[Scores, Scores]:
+    def avg_std(scoress: Iterator[ScoreHolder]) -> Tuple[ScoreHolder, ScoreHolder]:
         """
-        Consume a Scores' iterator and output its average and standard deviation Scores.
+        Outputs the average and standard deviation ScoreHolder of an iterator.
+        All of the ScoreHolder in the iterator have to have the same strucutre,
+        meanings the same keys, in the same order and tuples of similar size for each key
         """
         regular_sum = next(scoress)
         squared_sum = regular_sum ** 2
@@ -119,28 +171,31 @@ class Scores:
             squared_sum += scores ** 2
             count += 1
         return (regular_sum / count,
-                ((squared_sum * count - regular_sum ** 2) / (count * (count - 1))) ** (1 / 2))
+                ((squared_sum - (regular_sum ** 2) / count) / count) ** (1 / 2))
 
-    def compare(self, other: Scores) -> Scores:
-        return Scores({
+    def compare(self, other: ScoreHolder) -> ScoreHolder:
+        """
+        Outputs the result of the comparison of a ScoreHolder to another.
+        For two ScoreHolder to be compared they have to have the same structure,
+        meanings the same keys, in the same order and tuples of similar size for each key
+        """
+        return ScoreHolder({
             sk: tuple((Growth.compare(x, y) for x, y in zip(sv, ov)))
             for (sk, sv), ov in zip(self.dic.items(), other.dic.values())
         })
 
-    def compare_t(self, t: Tuple) -> Scores:
-        return Scores({
-            k: reversed(tuple((Growth.compare(x, y) for x, y in zip(v[::-1], t[::-1]))))
+    # TODO remove ? usefull ?
+    def compare_t(self, t: Tuple) -> ScoreHolder:
+        """
+        Compare all tuple of the ScoreHolder to a tuple
+        """
+        return ScoreHolder({
+            k: tuple(reversed(tuple((Growth.compare(x, y) for x, y in zip(v[::-1], t[::-1])))))
             for k, v in self.dic.items()
         })
 
-    @staticmethod
-    def growth(scoress: Iterator[Scores]) -> Scores:
-        res = next(scoress)
-        for scores in scoress:
-            res += scores
-        return res
 
-
+# TODO comment
 class Growth(Enum):
     STRICT_INCR = auto()
     INCR = auto()
@@ -173,6 +228,9 @@ class Growth(Enum):
             return Growth.INCR
 
     def __truediv__(self, other: Any):
+        """
+        Identity function, it's defined just so ScoreHolder.average can be reused
+        """
         return self
 
     def __repr__(self) -> str:
@@ -211,7 +269,7 @@ def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:
     return e,
 
 
-def evaluate(gold: Partition, sys: Partition) -> Scores:
+def evaluate(gold: Partition, sys: Partition) -> ScoreHolder:
     """
     Computes metrics scores for a (gold, sys) and outputs it as a Scores
     """
@@ -223,4 +281,4 @@ def evaluate(gold: Partition, sys: Partition) -> Scores:
     if len(gold) == len(sys):
         for name, metric in SK_METRICS.items():
             res[name] = to_tuple(metric(gold, sys))
-    return Scores(res)
+    return ScoreHolder(res)
