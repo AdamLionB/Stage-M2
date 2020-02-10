@@ -10,38 +10,38 @@ from scorch.main import clusters_from_json
 
 # this lib
 from partition_utils import Partition, singleton_partition, entity_partition, beta_partition, get_mentions
-from find_better_name import Scores, evaluate
+from find_better_name import ScoreHolder, evaluate
 
 
-def symetry_test(gold: Partition, sys: Partition) -> Scores:
+def symetry_test(gold: Partition, sys: Partition) -> ScoreHolder:
     scores_a = evaluate(gold, sys)
     scores_b = evaluate(sys, gold)
     return scores_a.compare(scores_b)
 
 
-def singleton_test(gold: Partition) -> Scores:
+def singleton_test(gold: Partition) -> ScoreHolder:
     return evaluate(gold, singleton_partition(get_mentions(gold)))
 
 
-def entity_test(gold: Partition) -> Scores:
+def entity_test(gold: Partition) -> ScoreHolder:
     return evaluate(gold, entity_partition(get_mentions(gold)))
 
 
-def identity_test(gold: Partition) -> Scores:
+def identity_test(gold: Partition) -> ScoreHolder:
     return evaluate(gold, gold)
 
 
-def triangle_test(a: Partition, b: Partition, c: Partition) -> Scores:
-    return Scores.compare(evaluate(a, c), evaluate(a, b) + evaluate(b, c))
+def triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
+    return ScoreHolder.compare(evaluate(a, c), evaluate(a, b) + evaluate(b, c))
 
 
 # TODO rename
 def r_test(
-        test: Callable[[Partition, ...], Scores],
+        test: Callable[[Partition, ...], ScoreHolder],
         partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
         std: bool = False
-) -> Union[Tuple[Scores, Scores], Scores]:
-    def intern(m) -> Iterator[Scores]:
+) -> Union[Tuple[ScoreHolder, ScoreHolder], ScoreHolder]:
+    def intern(m) -> Iterator[ScoreHolder]:
         n = len(signature(test).parameters)
         for _ in range(10):
             if partition_generators is None:
@@ -54,18 +54,18 @@ def r_test(
             yield test(*a)
     mentions = list(range(100))
     if std:
-        return Scores.avg_std(intern(mentions))
+        return ScoreHolder.avg_std(intern(mentions))
     else:
-        return Scores.average(intern(mentions))
+        return ScoreHolder.average(intern(mentions))
 
 
 def fixed_gold_test(
-        test: Callable[[Partition, ...], Scores],
+        test: Callable[[Partition, ...], ScoreHolder],
         it: Iterator[Partition],
         partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
         std: bool = False
-) -> Union[Tuple[Scores, Scores], Scores]:
-    def intern() -> Iterator[Scores]:
+) -> Union[Tuple[ScoreHolder, ScoreHolder], ScoreHolder]:
+    def intern() -> Iterator[ScoreHolder]:
         n = len(signature(test).parameters)-1
         for gold in it:
             m = get_mentions(gold)
@@ -78,15 +78,15 @@ def fixed_gold_test(
                 a = (part() for part in partition_generators)
             yield test(gold, *a)
     if std:
-        return Scores.avg_std(intern())
+        return ScoreHolder.avg_std(intern())
     else:
-        return Scores.average(intern())
+        return ScoreHolder.average(intern())
 
 
 def ancor_test(
-        test: Callable[[Partition], Scores],
+        test: Callable[[Partition], ScoreHolder],
         std: bool = False
-) -> Union[Tuple[Scores, Scores], Scores]:
+) -> Union[Tuple[ScoreHolder, ScoreHolder], ScoreHolder]:
     return fixed_gold_test(test, iter_ancor(), std=std)
 
 
