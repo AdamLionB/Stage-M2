@@ -271,7 +271,7 @@ def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:
 
 def evaluate(gold: Partition, sys: Partition) -> ScoreHolder:
     """
-    Computes metrics scores for a (gold, sys) and outputs it as a Scores
+    Computes metrics scores for a (gold, sys) and outputs it as a ScoreHolder
     """
     res = {}
     for name, metric in METRICS.items():
