@@ -91,9 +91,58 @@ def g(n):
 	return sum(map(lambda x: 1, f(n)))
 
 
-try :
-	print(timed(g, 9))
-	conn.commit()
-finally:
-	cur.close()
-	conn.close()
+
+
+# try :
+# 	print(timed(g, 12))
+# 	conn.commit()
+# finally:
+# 	cur.close()
+# 	conn.close()
+
+q = { 1: [[1]] }
+
+def decompose(n):
+	try:
+		return q[n]
+	except:
+		pass
+	result = [[n]]
+	for i in range(1, n):
+		a = n-i
+		R = decompose(i)
+		for r in R:
+			if r[0] <= a:
+				result.append([a] + r)
+	q[n] = result
+	return result
+
+def j(l):
+	nb_singleton = 0
+	nb_cl = 0
+	nb_nl = 0
+	nb_l = 0
+	prop_l = 0
+	nb_part = 0
+	nb_mentions = 0
+	for x in l:
+		nb_part+=1
+		if x == 1:
+			nb_singleton+=1
+		nb_cl += int((x * (x -1)) / 2)
+		nb_mentions += x
+	nb_l = int((nb_mentions * (nb_mentions -1)) / 2)
+	nb_nl = nb_l - nb_cl
+	prop_cl = nb_cl / nb_l
+	cur.execute(f"INSERT INTO test2 VALUES ('{l}', '{nb_mentions}', '{nb_part}', '{nb_singleton}', '{nb_cl}', '{nb_nl}', '{prop_cl}');")
+	return nb_singleton, nb_cl, nb_nl, prop_cl, nb_part
+
+# try:
+# 	for i in range(25,30):
+# 		for partition in decompose(i):
+# 			j(partition)
+# 	conn.commit()
+# finally:
+# 	cur.close()
+# 	conn.close()
+

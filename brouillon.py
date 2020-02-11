@@ -16,7 +16,7 @@ from collections import defaultdict
 from enum import Enum, auto
 from inspect import signature
 
-from find_better_name import Scores, evaluate
+from find_better_name import ScoreHolder, evaluate
 from partition_utils import Partition, beta_partition, entity_partition, singleton_partition, get_mentions
 from testes import symetry_test, singleton_test, entity_test, r_test, ancor_test
 import math
@@ -182,13 +182,13 @@ def introduce_randomness(partition: Partition):
 def score_random_partitions(
         golds: Iterator[Partition],
         partition_generator: Callable[[List], Partition]
-) -> Iterator[Scores]:
+) -> Iterator[ScoreHolder]:
     """
     Computes Scores for a partition against random partition generated with partition_generator
     """
     for n, k in enumerate(golds):
         syss: Iterator[Partition] = (partition_generator(get_mentions(k)) for _ in range(1))
-        yield Scores.average(map(lambda r: evaluate(k, r), syss))
+        yield ScoreHolder.average(map(lambda r: evaluate(k, r), syss))
 
 
 # start = time()
@@ -202,12 +202,12 @@ def score_random_partitions(
 
 
 # TODO all test in a similar format ?
-def golds_vs_entity(golds: Iterator[Partition]) -> Tuple[Scores, Scores]:
-    return Scores.avg_std(score_random_partitions(golds, entity_partition))
+def golds_vs_entity(golds: Iterator[Partition]) -> Tuple[ScoreHolder, ScoreHolder]:
+    return ScoreHolder.avg_std(score_random_partitions(golds, entity_partition))
 
 
-def golds_vs_singleton(golds: Iterator[Partition]) -> Scores:
-    return Scores.average(score_random_partitions(golds, singleton_partition))
+def golds_vs_singleton(golds: Iterator[Partition]) -> ScoreHolder:
+    return ScoreHolder.average(score_random_partitions(golds, singleton_partition))
 
 
 # TODO comment that
@@ -226,13 +226,13 @@ def duplicate_clusters(gold: Partition, sys: Partition) -> Tuple[Partition, Part
     return new_gold, new_sys
 
 
-def scale_test(gold: Partition, sys: Partition) -> Scores:
+def scale_test(gold: Partition, sys: Partition) -> ScoreHolder:
     score_a = evaluate(gold, sys)
     score_b = evaluate(*duplicate_clusters(gold, sys))
     return score_a.compare(score_b)
 
 
-def true_test(gold: Partition, sys: Partition) -> Scores:
+def true_test(gold: Partition, sys: Partition) -> ScoreHolder:
     a = evaluate(gold, sys)
     t = a['true']
     return a.compare_t(t)
@@ -265,11 +265,11 @@ def true_test(gold: Partition, sys: Partition) -> Scores:
 
 
 # print(scale_test, '\n', r_test(scale_test))
-print(symetry_test, '\n', r_test(symetry_test))
+# print(symetry_test, '\n', r_test(symetry_test))
 # print(singleton_test, '\n', ancor_test(singleton_test, std=True))
-print(entity_test, '\n', ancor_test(entity_test, std=True))
+# print(entity_test, '\n', ancor_test(entity_test, std=True))
 # print(singleton_test, '\n', r_test(singleton_test, std=False))
-print(entity_test, '\n', r_test(entity_test, std=False))
+# print(entity_test, '\n', r_test(entity_test, std=False))
 # print(triangle_test, '\n', r_test(triangle_test))
 # print(identity_test, '\n', r_test(identity_test))
 # print(true_test, '\n',  r_test(true_test))
