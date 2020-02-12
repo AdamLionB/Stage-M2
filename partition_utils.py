@@ -25,7 +25,7 @@ def random_partition(mentions: List[T], rng: Callable[[], float]) -> Partition:
     return partitions
 
 
-def beta_partition(a: float, b: float, mentions: List[T]) -> Partition:
+def beta_partition(mentions: List[T], a: float, b: float) -> Partition:
     """
     Generates a random partitions of mentions, entity's sizes are randomly drawn following a
     beta distribution of parameter a, b.
