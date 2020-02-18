@@ -14,8 +14,11 @@ from scorch.scores import conll2012
 
 # this lib
 from partition_utils import partition_to_sklearn_format, Partition
+from scorer import lea, edit
 
 METRICS['conll'] = conll2012
+METRICS['LEA'] = lea
+#METRICS['edit'] = edit
 SK_METRICS = {
     'ARI': metrics.adjusted_rand_score,
     'HCV': metrics.homogeneity_completeness_v_measure,
@@ -271,7 +274,7 @@ def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:
 
 def evaluate(gold: Partition, sys: Partition) -> ScoreHolder:
     """
-    Computes metrics scores for a (gold, sys) and outputs it as a ScoreHolder
+    Computes metrics scores for a (gold, sys) and outputs it as a Scores
     """
     res = {}
     for name, metric in METRICS.items():
