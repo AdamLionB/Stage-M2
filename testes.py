@@ -37,14 +37,14 @@ def triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
 
 # TODO rename
 def r_test(
-        test: Callable[[Partition, ...], ScoreHolder],
+        test_func: Callable[[Partition, ...], ScoreHolder],
         partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
         std: bool = False,
         repetitions: int = 100,
         beta_param: Tuple[float, float] = (1, 1)
 ) -> Union[Tuple[ScoreHolder, ScoreHolder], ScoreHolder]:
     def intern(m) -> Iterator[ScoreHolder]:
-        n = len(signature(test).parameters)
+        n = len(signature(test_func).parameters)
         for _ in range(repetitions):
             if partition_generators is None:
                 a = (beta_partition(*beta_param, m) for _ in range(n))
@@ -52,8 +52,8 @@ def r_test(
                 if len(partition_generators) != n:
                     # TODO exception
                     raise Exception()
-                a = (part() for part in partition_generators)
-            yield test(*a)
+                a = (part(m) for part in partition_generators)
+            yield test_func(*a)
     mentions = list(range(100))
     if std:
         return ScoreHolder.avg_std(intern(mentions))
@@ -62,7 +62,7 @@ def r_test(
 
 
 def fixed_gold_test(
-        test: Callable[[Partition, ...], ScoreHolder],
+        test_func: Callable[[Partition, ...], ScoreHolder],
         it: Iterator[Partition],
         partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
         std: bool = False,
@@ -70,7 +70,7 @@ def fixed_gold_test(
         beta_param: Tuple[float, float] = (1, 1)
 ) -> Union[Tuple[ScoreHolder, ScoreHolder], ScoreHolder]:
     def intern() -> Iterator[ScoreHolder]:
-        n = len(signature(test).parameters)-1
+        n = len(signature(test_func).parameters) - 1
         for gold in it:
             m = get_mentions(gold)
             for _ in range(repetitions):
@@ -80,8 +80,8 @@ def fixed_gold_test(
                     if len(partition_generators) != n:
                         # TODO exception
                         raise Exception()
-                    a = (part() for part in partition_generators)
-            yield test(gold, *a)
+                    a = (part(m) for part in partition_generators)
+            yield test_func(gold, *a)
     if std:
         return ScoreHolder.avg_std(intern())
     else:
@@ -89,12 +89,13 @@ def fixed_gold_test(
 
 
 def ancor_test(
-        test: Callable[[Partition], ScoreHolder],
+        test_func: Callable[[Partition], ScoreHolder],
+        partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
         std: bool = False,
         repetitions: int = 100,
         beta_param: Tuple[float, float] = (1, 1)
 ) -> Union[Tuple[ScoreHolder, ScoreHolder], ScoreHolder]:
-    return fixed_gold_test(test, iter_ancor(), std=std, repetitions=repetitions, beta_param=beta_param)
+    return fixed_gold_test(test_func, iter_ancor(), partition_generators=partition_generators, std=std, repetitions=repetitions, beta_param=beta_param)
 
 
 # TODO generalise for any json format
