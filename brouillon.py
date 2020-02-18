@@ -305,52 +305,7 @@ def true_test(gold: Partition, sys: Partition) -> ScoreHolder:
 #     e = (rc_wn + wc_rn) / L
 #     print(METRICS['BLANC'](gold, beta_partition(get_mentions(gold), 1, 1)))
 #     break
-def get_entity(partition, mention):
-    for entity in partition:
-        if mention in entity:
-            return entity
 
-from itertools import combinations
-def lea_sub(keys: Partition, response: Partition):
-    correctLinkRatio = 0
-    allMentions = 0
-
-    for key_entity in keys:
-        key_entity_size = len(key_entity)
-        correctLinks = 0
-        mappedEntities = []
-
-        if key_entity_size == 1:
-
-            cMention = [i for i in key_entity][0]
-            rEntity = get_entity(response, cMention)
-            rEntitySize = len(rEntity)
-
-            if (rEntitySize == 1):
-                correctLinks+=1
-
-        else:
-            for cMention, nMention in combinations(key_entity, 2):
-                if get_entity(response, cMention) == get_entity(response, nMention) and get_entity(response, cMention) is not None:
-                    print(cMention, nMention)
-                    correctLinks+=1
-
-        entityLinks = 1
-        if key_entity_size != 1:
-            entityLinks = (key_entity_size * (key_entity_size - 1)) / 2
-        print(entityLinks, key_entity_size, correctLinks)
-        correctLinkRatio += key_entity_size * (correctLinks / entityLinks)
-        allMentions += key_entity_size
-    return correctLinkRatio / allMentions
-
-
-def lea(keys, response):
-    R = lea_sub(keys, response)
-    P = lea_sub(response, keys)
-    print(P, R)
-    return (2 * P * R) / (P + R)
-
-print(lea([{1,2,3}, {4, 5, 6, 7}], [{1,2}, {3,4}, {6,7,8, 9}]))
 
 
 
