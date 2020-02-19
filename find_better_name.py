@@ -15,10 +15,16 @@ from scorch.scores import conll2012
 # this lib
 from partition_utils import partition_to_sklearn_format, Partition
 from scorer import lea, edit
+from utils import Timer
 
-METRICS['conll'] = conll2012
-METRICS['LEA'] = lea
-#METRICS['edit'] = edit
+timer = Timer()
+
+METRICS = {k : timer.timed(v) for k, v in METRICS.items()}
+
+
+METRICS['conll'] = timer.timed(conll2012)
+METRICS['LEA'] = timer.timed(lea)
+#METRICS['edit'] = timer.timed(edit)
 SK_METRICS = {
     'ARI': metrics.adjusted_rand_score,
     'HCV': metrics.homogeneity_completeness_v_measure,
