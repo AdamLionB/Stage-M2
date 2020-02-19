@@ -38,11 +38,15 @@ def lea_sub(keys: Partition, response: Partition) -> float:
     return correct_link_ratio / nb_mentions
 
 
-def lea(keys : Partition, response : Partition) -> Tuple[float, float, float]:
+def lea(keys: Partition, response: Partition) -> Tuple[float, float, float]:
     R = lea_sub(keys, response)
     P = lea_sub(response, keys)
-    return R, P, (2 * P * R) / (P + R)
+    F = (2 * P * R) / (P + R) if R+P != 0 else 0
+    return R, P, F
 
 
 def edit(keys: Partition, response: Partition) -> float:
     return max((sum(len(a.intersection(b)) for a, b in zip(keys, perm)) for perm in permutations(response))) / len(get_mentions(keys))
+
+def edit2(keys, response):
+    {}

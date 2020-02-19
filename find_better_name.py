@@ -18,7 +18,7 @@ from scorer import lea, edit
 
 METRICS['conll'] = conll2012
 METRICS['LEA'] = lea
-METRICS['edit'] = edit
+#METRICS['edit'] = edit
 SK_METRICS = {
     'ARI': metrics.adjusted_rand_score,
     'HCV': metrics.homogeneity_completeness_v_measure,
