@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 # std libs
-from typing import Tuple, Dict, Iterator, Union, Any
+from typing import Tuple, Dict, Iterator, Union, Any, Callable
 from enum import Enum, auto
+from math import isclose
 from itertools import zip_longest
 
 # other libs
@@ -203,6 +204,12 @@ class ScoreHolder:
             for k, v in self.dic.items()
         })
 
+    def apply_to_values(self, func: Callable[[Any, Any], Any], scalar: float) -> ScoreHolder:
+        return ScoreHolder({
+            k: tuple(func(x, scalar) for x in v)
+            for k, v in self.dic.items()
+        })
+
 
 # TODO comment
 class Growth(Enum):
@@ -261,12 +268,20 @@ class Growth(Enum):
 
     @staticmethod
     def compare(a: float, b: float):
+        if isclose(a, b):
+            return Growth.CONST
         if a > b:
             return Growth.STRICT_DECR
         if a < b:
             return Growth.STRICT_INCR
-        return Growth.CONST
 
+
+    @staticmethod
+    def tmp(a: float, b: float):
+        if isclose(a, b):
+            return Growth.NON_MONOTONIC
+        else:
+            return Growth.CONST
 
 def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:
     """
