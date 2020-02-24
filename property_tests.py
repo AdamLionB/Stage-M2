@@ -4,21 +4,24 @@ from typing import Callable, Tuple, Union, Iterator, Optional
 from inspect import signature
 from os import listdir
 from itertools import product
-from functools import partial
+from math import isclose
 
 #scorch lib
 from scorch.main import clusters_from_json
 
 # this lib
 from partition_utils import Partition, singleton_partition, entity_partition, beta_partition, get_mentions,\
-    all_partition_of_size, all_partition_up_to_size
-from find_better_name import ScoreHolder, evaluate, Growth
+    all_partition_of_size
+from utils import ScoreHolder, evaluate, BinaryResult
 
 
 def symetry_test(gold: Partition, sys: Partition) -> ScoreHolder:
-    func = lambda x, y: BinaryResult.get_binary_result(not isclose(x, y))
-    return ScoreHolder.apply(evaluate(gold, sys), func, evaluate(sys, gold))
-    #return scores_a.compare(scores_b)
+    """
+    tests whether score(gold, sys) = score(sys, gold)
+    """
+    def intern(x: float, y: float) -> BinaryResult:
+        return BinaryResult.get_binary_result(not isclose(x, y))
+    return ScoreHolder.apply(evaluate(gold, sys), intern, evaluate(sys, gold))
 
 
 def singleton_test(gold: Partition) -> ScoreHolder:
@@ -28,35 +31,41 @@ def singleton_test(gold: Partition) -> ScoreHolder:
 def entity_test(gold: Partition) -> ScoreHolder:
     return evaluate(gold, entity_partition(get_mentions(gold)))
 
-from find_better_name import BinaryResult
-from math import isclose
+
 def non_identity_test(gold: Partition, sys: Partition) -> Optional[ScoreHolder]:
+    """
+    tests whether score(gold, sys) != 1 with gold != sys
+    """
+    def intern(x: float):
+        return BinaryResult.get_binary_result(isclose(x, 1))
     if gold == sys:
         return None
-    func = lambda x: BinaryResult.get_binary_result(isclose(x, 1))
-    return evaluate(gold, sys).apply_to_values(func)
-    #return evaluate(gold, sys).apply_to_values(Growth.tmp, 1)
+    return evaluate(gold, sys).apply_to_values(intern)
 
 
 def identity_test(gold: Partition) -> ScoreHolder:
-    func = lambda x: BinaryResult.get_binary_result(not isclose(x, 1))
-    return evaluate(gold, gold).apply_to_values(func)
-    #return evaluate(gold, gold).apply_to_values(Growth.compare, 1)
+    """
+    tests wether score(gold, gold) =1
+    """
+    def intern(x: float):
+        return BinaryResult.get_binary_result(not isclose(x, 1))
+    return evaluate(gold, gold).apply_to_values(intern)
+
+
+def distance_triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
+    def intern(x: float, y: float) -> BinaryResult:
+        return BinaryResult.get_binary_result(not(isclose(x, y) or x < y))
+    return ScoreHolder.apply(evaluate(a, c), intern, evaluate(a, b) + evaluate(b, c))
 
 
 def triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
-    func = lambda x, y: BinaryResult.get_binary_result(not(isclose(x, y) or x < y))
-    return ScoreHolder.apply(evaluate(a, c), func, evaluate(a, b) + evaluate(b, c))
-    #return ScoreHolder.compare(evaluate(a, c), evaluate(a, b) + evaluate(b, c))
-
-def kinda_triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
-    func = lambda x, y: BinaryResult.get_binary_result(not (isclose(x, y) or x > y))
-    return ScoreHolder.apply(evaluate(b, b) + evaluate(a, c), func, evaluate(a, b) + evaluate(b, c))
-    #return ScoreHolder.compare(evaluate(a, b) + evaluate(b, c), evaluate(b, b) + evaluate(a, c))
+    def intern(x: float, y:float) -> BinaryResult:
+        return BinaryResult.get_binary_result(not (isclose(x, y) or x > y))
+    return ScoreHolder.apply(evaluate(b, b) + evaluate(a, c), intern, evaluate(a, b) + evaluate(b, c))
 
 
 # TODO rename
-def r_test(
+def randomized_test(
         test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
         partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
         std: bool = False,
@@ -83,7 +92,7 @@ def r_test(
         return ScoreHolder.average(intern(mentions))
 
 
-def fixed_gold_test(
+def fixed_gold_randomized_test(
         test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
         it: Iterator[Partition],
         partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
@@ -111,17 +120,17 @@ def fixed_gold_test(
         return ScoreHolder.average(intern())
 
 
-def ancor_test(
+def ancor_gold_randomized_test(
         test_func: Callable[[Partition], Optional[ScoreHolder]],
         partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
         std: bool = False,
         repetitions: int = 100,
         beta_param: Tuple[float, float] = (1, 1)
 ) -> Union[Tuple[ScoreHolder, ScoreHolder], ScoreHolder]:
-    return fixed_gold_test(test_func, iter_ancor(), partition_generators=partition_generators, std=std, repetitions=repetitions, beta_param=beta_param)
+    return fixed_gold_randomized_test(test_func, iter_ancor(), partition_generators=partition_generators, std=std, repetitions=repetitions, beta_param=beta_param)
 
 
-def a_test(
+def all_partitions_test(
         test_func: Callable[[Partition], Optional[ScoreHolder]],
         std: bool = False,
         start: int = 1,

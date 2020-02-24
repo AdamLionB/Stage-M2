@@ -5,7 +5,7 @@ from itertools import combinations
 
 from partition_utils import entity_partition, singleton_partition, partition_to_sklearn_format, get_mentions, \
     random_partition, beta_partition
-from find_better_name import ScoreHolder, Growth, to_tuple, evaluate
+from utils import ScoreHolder, Growth, to_tuple, evaluate
 
 
 class test_partition_utils(unittest.TestCase):

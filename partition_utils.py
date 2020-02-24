@@ -67,6 +67,9 @@ def get_mentions(partition: Partition) -> List[T]:
 
 
 def all_partition_of_size(n: int) -> Iterator[Partition]:
+    """
+    Generates all partition of n mentions
+    """
     if n == 1:
         yield [{1}]
     else:
@@ -76,6 +79,9 @@ def all_partition_of_size(n: int) -> Iterator[Partition]:
 
 
 def all_partition_up_to_size(n: int) -> Iterator[Partition]:
+    """
+    Generates all partition of n or less mentions.
+    """
     def intern(n):
         if n == 1:
             yield 1, [{1}]

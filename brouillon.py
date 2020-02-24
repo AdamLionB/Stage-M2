@@ -16,9 +16,9 @@ from collections import defaultdict
 from enum import Enum, auto
 from inspect import signature
 
-from find_better_name import ScoreHolder, evaluate
+from utils import ScoreHolder, evaluate
 from partition_utils import Partition, beta_partition, entity_partition, singleton_partition, get_mentions
-from testes import symetry_test, singleton_test, entity_test, r_test, ancor_test
+from property_tests import symetry_test, singleton_test, entity_test, randomized_test, ancor_gold_randomized_test
 import math
 
 sys_lib.path.insert(1, '../scorch')
