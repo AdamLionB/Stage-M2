@@ -204,9 +204,20 @@ class ScoreHolder:
             for k, v in self.dic.items()
         })
 
-    def apply_to_values(self, func: Callable[[Any, Any], Any], scalar: float) -> ScoreHolder:
+    def apply(self, func: Callable[[Any, Any], Any], other: ScoreHolder) -> ScoreHolder:
+        """
+        Outputs the result of the comparison of a ScoreHolder to another.
+        For two ScoreHolder to be compared they have to have the same structure,
+        meanings the same keys, in the same order and tuples of similar size for each key
+        """
         return ScoreHolder({
-            k: tuple(func(x, scalar) for x in v)
+            sk: tuple((func(x, y) for x, y in zip(sv, ov)))
+            for (sk, sv), ov in zip(self.dic.items(), other.dic.values())
+        })
+
+    def apply_to_values(self, func: Callable[[Any], Any]) -> ScoreHolder:
+        return ScoreHolder({
+            k: tuple(func(x) for x in v)
             for k, v in self.dic.items()
         })
 
@@ -282,6 +293,43 @@ class Growth(Enum):
             return Growth.NON_MONOTONIC
         else:
             return Growth.CONST
+
+class BinaryResult(Enum):
+    FAILED = True
+    PASSED = False
+
+    def __add__(self, other: BinaryResult):
+        try :
+            if self.value | other.value:
+                return BinaryResult.FAILED
+            else:
+                return BinaryResult.PASSED
+        except:
+            print(self, self.value)
+            print(other, other.value)
+
+    def __truediv__(self, other: Any):
+        """
+        Identity function, it's defined just so ScoreHolder.average can be reused
+        """
+        return self
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    def __str__(self) -> str:
+        if self.value:
+            return 'X'
+        else:
+            return 'V'
+
+    @staticmethod
+    def get_binary_result(x: bool) -> BinaryResult:
+        if x:
+            return BinaryResult.FAILED
+        else:
+            return BinaryResult.PASSED
+
 
 def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:
     """

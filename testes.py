@@ -16,9 +16,9 @@ from find_better_name import ScoreHolder, evaluate, Growth
 
 
 def symetry_test(gold: Partition, sys: Partition) -> ScoreHolder:
-    scores_a = evaluate(gold, sys)
-    scores_b = evaluate(sys, gold)
-    return scores_a.compare(scores_b)
+    func = lambda x, y: BinaryResult.get_binary_result(not isclose(x, y))
+    return ScoreHolder.apply(evaluate(gold, sys), func, evaluate(sys, gold))
+    #return scores_a.compare(scores_b)
 
 
 def singleton_test(gold: Partition) -> ScoreHolder:
@@ -28,22 +28,31 @@ def singleton_test(gold: Partition) -> ScoreHolder:
 def entity_test(gold: Partition) -> ScoreHolder:
     return evaluate(gold, entity_partition(get_mentions(gold)))
 
-
+from find_better_name import BinaryResult
+from math import isclose
 def non_identity_test(gold: Partition, sys: Partition) -> Optional[ScoreHolder]:
     if gold == sys:
         return None
-    return evaluate(gold, sys).apply_to_values(Growth.tmp, 1)
+    func = lambda x: BinaryResult.get_binary_result(isclose(x, 1))
+    return evaluate(gold, sys).apply_to_values(func)
+    #return evaluate(gold, sys).apply_to_values(Growth.tmp, 1)
 
 
 def identity_test(gold: Partition) -> ScoreHolder:
-    return evaluate(gold, gold).apply_to_values(Growth.compare, 1)
+    func = lambda x: BinaryResult.get_binary_result(not isclose(x, 1))
+    return evaluate(gold, gold).apply_to_values(func)
+    #return evaluate(gold, gold).apply_to_values(Growth.compare, 1)
 
 
 def triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
-    return ScoreHolder.compare(evaluate(a, c), evaluate(a, b) + evaluate(b, c))
+    func = lambda x, y: BinaryResult.get_binary_result(not(isclose(x, y) or x < y))
+    return ScoreHolder.apply(evaluate(a, c), func, evaluate(a, b) + evaluate(b, c))
+    #return ScoreHolder.compare(evaluate(a, c), evaluate(a, b) + evaluate(b, c))
 
 def kinda_triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
-    return ScoreHolder.compare(evaluate(a, b) + evaluate(b, c), evaluate(b, b) + evaluate(a, c))
+    func = lambda x, y: BinaryResult.get_binary_result(not (isclose(x, y) or x > y))
+    return ScoreHolder.apply(evaluate(b, b) + evaluate(a, c), func, evaluate(a, b) + evaluate(b, c))
+    #return ScoreHolder.compare(evaluate(a, b) + evaluate(b, c), evaluate(b, b) + evaluate(a, c))
 
 
 # TODO rename
