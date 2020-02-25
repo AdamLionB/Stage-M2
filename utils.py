@@ -348,7 +348,7 @@ class BinaryResult(Enum):
             return 'V'
 
     @staticmethod
-    def get_binary_result(has_passed: bool) -> BinaryResult:
+    def has_passed_test(has_passed: bool) -> BinaryResult:
         """
         Converts a boolean in a BinaryResult
         """

@@ -16,12 +16,79 @@ from partition_utils import Partition, singleton_partition, entity_partition, be
 from utils import ScoreHolder, evaluates, BinaryResult
 
 
+def a1_test() -> ScoreHolder:
+    def intern(x: float, y: float) -> BinaryResult:
+        return BinaryResult.has_passed_test(not isclose(x, y) and x > y)
+    gold = [{1, 2}, {3}, {4}]
+    sys = [{1, 2}, {3, 4}]
+    return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
+
+
+def a2_test() -> ScoreHolder:
+    def intern(x: float, y: float) -> BinaryResult:
+        return BinaryResult.has_passed_test(not isclose(x, y) and x > y)
+    gold = [{3}, {4}]
+    sys = [{3, 4}]
+    return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
+
+
+def a3_test() -> ScoreHolder:
+    def intern(x: float, y: float) -> BinaryResult:
+        return BinaryResult.has_passed_test(not isclose(x, y) and x > y)
+    gold = [{1, 2}, {3}, {4}]
+    sys = [{1, 2, 3}]
+    return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
+
+
+def b1_test() -> ScoreHolder:
+    def intern(x: float, y: float) -> BinaryResult:
+        return BinaryResult.get_binary_result(not isclose(x, y) and x < y)
+    gold = [{1, 2}, {3, 4, 5}]
+    sys1 = [{1, 2, 3}, {4, 5}]
+    sys2 = [{1, 2, 3, 4, 5}]
+    return ScoreHolder.apply(evaluates(gold, sys1), intern, evaluates(gold, sys2))
+
+
+def b2_test() -> ScoreHolder:
+    def intern(x: float, y: float) -> BinaryResult:
+        return BinaryResult.get_binary_result(not isclose(x, y) and x < y)
+    gold = [{1, 2, 3, 4, 5}, {6, 7}]
+    sys1 = [{1, 2, 3, 4}, {5, 6, 7}]
+    sys2 = [{1, 2}, {3, 4, 5}, {6, 7}]
+    return ScoreHolder.apply(evaluates(gold, sys1), intern, evaluates(gold, sys2))
+
+
+def d1_test() -> ScoreHolder:
+    def intern(x: float, y: float) -> BinaryResult:
+        return BinaryResult.get_binary_result(isclose(x, y))
+    gold1 = [{1, 2}, {3, 4}, {5, 6}]
+    sys1 = [{1, 3}, {2, 4}, {5, 6}]
+    gold2 = [{1, 2}, {3, 4}, {5, 6, 7, 8}]
+    sys2 = [{1, 3}, {2, 4}, {5, 6, 7, 8}]
+    return ScoreHolder.apply(evaluates(gold1, sys1), intern, evaluates(gold2, sys2))
+
+
+def d2_test() -> ScoreHolder:
+    def intern(x: float, y: float) -> BinaryResult:
+        return BinaryResult.get_binary_result(isclose(x, y))
+    gold = [{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13}, {14, 15, 16}]
+    sys1 = [{1, 2, 3, 4, 6}, {5, 7, 8, 9, 10}, {11, 12, 13}, {14, 15, 16}]
+    sys2 = [{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 14}, {13, 15, 16}]
+    return ScoreHolder.apply(evaluates(gold, sys1), intern, evaluates(gold, sys2))
+
+
+def f_test(gold: Partition, sys:Partition) -> ScoreHolder:
+    def intern(x: float) -> BinaryResult:
+        return BinaryResult.get_binary_result(not isclose(x, 0))
+    return ScoreHolder.apply_to_values(evaluates(gold, sys), intern)
+
+
 def symetry_test(gold: Partition, sys: Partition) -> ScoreHolder:
     """
     evaluates whether score(gold, sys) = score(sys, gold)
     """
     def intern(x: float, y: float) -> BinaryResult:
-        return BinaryResult.get_binary_result(isclose(x, y))
+        return BinaryResult.has_passed_test(isclose(x, y))
     return ScoreHolder.apply(evaluates(gold, sys), intern, evaluates(sys, gold))
 
 
@@ -44,7 +111,7 @@ def non_identity_test(gold: Partition, sys: Partition) -> Optional[ScoreHolder]:
     evaluates whether score(gold, sys) != 1 with gold != sys
     """
     def intern(x: float):
-        return BinaryResult.get_binary_result(not isclose(x, 1))
+        return BinaryResult.has_passed_test(not isclose(x, 1))
     if gold == sys:
         return None
     return evaluates(gold, sys).apply_to_values(intern)
@@ -55,7 +122,7 @@ def identity_test(gold: Partition) -> ScoreHolder:
     evaluates whether score(gold, gold) = 1
     """
     def intern(x: float):
-        return BinaryResult.get_binary_result(isclose(x, 1))
+        return BinaryResult.has_passed_test(isclose(x, 1))
     return evaluates(gold, gold).apply_to_values(intern)
 
 
@@ -65,7 +132,7 @@ def triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
     s(a,b) + s(b,c) <= s(b,b) + s(a,b)
     """
     def intern(x: float, y:float) -> BinaryResult:
-        return BinaryResult.get_binary_result(isclose(x, y) or x < y)
+        return BinaryResult.has_passed_test(isclose(x, y) or x < y)
     return ScoreHolder.apply(evaluates(a, b) + evaluates(b, c), intern, evaluates(b, b) + evaluates(a, c))
 
 
