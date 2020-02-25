@@ -1,6 +1,6 @@
-from testes import r_test, ancor_test, symetry_test, singleton_test, entity_test, identity_test, triangle_test
+from property_tests import randomized_test, ancor_gold_randomized_test, symetry_test, singleton_test, entity_test, identity_test, triangle_test
 from partition_utils import beta_partition
-from find_better_name import ScoreHolder
+from utils import ScoreHolder
 from functools import partial
 from itertools import product
 
@@ -23,7 +23,7 @@ B = {1: {singleton_test: ('test singleton', True),
 def g(repeat, test, std):
     for prod in product(distributions, repeat=repeat):
         print(prod)
-        res = r_test(test, partition_generators=prod, std=std)
+        res = randomized_test(test, partition_generators=prod, std=std)
         print(res)
         yield res
 
@@ -31,9 +31,9 @@ def h(repeat, test, std):
     for prod in product(distributions, repeat=repeat):
         print(('ancor', *prod))
         if repeat == 0:
-            res = ancor_test(test, repetitions=1, std=std)
+            res = ancor_gold_randomized_test(test, repetitions=1, std=std)
         else:
-            res = ancor_test(test, partition_generators=prod, std=std)
+            res = ancor_gold_randomized_test(test, partition_generators=prod, std=std)
         print(res)
         yield res
 

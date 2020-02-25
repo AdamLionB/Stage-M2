@@ -1,5 +1,5 @@
 # std libs
-from typing import TypeVar, List, Callable, Set
+from typing import TypeVar, List, Callable, Set, Iterator
 from random import shuffle
 from math import floor
 
@@ -19,7 +19,7 @@ def random_partition(mentions: List[T], rng: Callable[[], float]) -> Partition:
     shuffle(mentions)
     partitions = []
     while len(mentions) != 0:
-        y = floor(rng() * len(mentions))+1
+        y = floor(rng() * len(mentions)) + 1
         partitions.append(set(mentions[:y]))
         mentions = mentions[y:]
     return partitions
@@ -64,3 +64,31 @@ def get_mentions(partition: Partition) -> List[T]:
     Return the list of all mentions in a Partition
     """
     return [mention for entity in partition for mention in entity]
+
+
+def all_partition_of_size(n: int) -> Iterator[Partition]:
+    """
+    Generates all partition of n mentions
+    """
+    if n == 1:
+        yield [{1}]
+    else:
+        for partition in all_partition_of_size(n - 1):
+            for e, part, in enumerate(partition + [set()]):
+                yield partition[:e] + [part.union({n})] + partition[e + 1:]
+
+
+def all_partition_up_to_size(n: int) -> Iterator[Partition]:
+    """
+    Generates all partition of n or less mentions.
+    """
+    def intern(n):
+        if n == 1:
+            yield 1, [{1}]
+        else:
+            for partition_size, partition in intern(n - 1):
+                yield partition_size, partition
+                if partition_size == n-1:
+                    for e, part, in enumerate(partition + [set()]):
+                        yield n, partition[:e] + [part.union({n})] + partition[e + 1:]
+    return (partition for _, partition in intern(n))

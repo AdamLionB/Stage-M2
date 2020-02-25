@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 # std libs
-from typing import Tuple, Dict, Iterator, Union, Any
+from typing import Tuple, Dict, Iterator, Union, Any, Callable
 from enum import Enum, auto
+from math import isclose
+from time import time
 from itertools import zip_longest
 
 # other libs
@@ -16,9 +18,36 @@ from scorch.scores import conll2012
 from partition_utils import partition_to_sklearn_format, Partition
 from scorer import lea, edit
 
-METRICS['conll'] = conll2012
-METRICS['LEA'] = lea
-#METRICS['edit'] = edit
+
+class Timer:
+    def __init__(self):
+        self.dic = {}
+
+    def timed(self, func: Callable) -> Callable:
+        self.dic[func] = 0
+
+        def intern(*args, **kwargs):
+            start = time()
+            res = func(*args, **kwargs)
+            self.dic[func] += time() - start
+            return res
+        return intern
+
+    def __repr__(self):
+        res = ''
+        for k, v in self.dic.items():
+            res += f'{k.__name__}\t\t: {v}\n'
+        return res
+
+
+timer = Timer()
+
+METRICS = {k: timer.timed(v) for k, v in METRICS.items()}
+
+
+METRICS['conll'] = timer.timed(conll2012)
+METRICS['LEA'] = timer.timed(lea)
+# METRICS['edit'] = timer.timed(edit)
 SK_METRICS = {
     'ARI': metrics.adjusted_rand_score,
     'HCV': metrics.homogeneity_completeness_v_measure,
@@ -197,9 +226,29 @@ class ScoreHolder:
             for k, v in self.dic.items()
         })
 
+    def apply(self, func: Callable[[Any, Any], Any], other: ScoreHolder) -> ScoreHolder:
+        """
+        Outputs the result of the comparison of a ScoreHolder to another.
+        For two ScoreHolder to be compared they have to have the same structure,
+        meanings the same keys, in the same order and tuples of similar size for each key
+        """
+        return ScoreHolder({
+            sk: tuple((func(x, y) for x, y in zip(sv, ov)))
+            for (sk, sv), ov in zip(self.dic.items(), other.dic.values())
+        })
 
-# TODO comment
+    def apply_to_values(self, func: Callable[[Any], Any]) -> ScoreHolder:
+        return ScoreHolder({
+            k: tuple(func(x) for x in v)
+            for k, v in self.dic.items()
+        })
+
+
+# TODO remove ? usefull ?
 class Growth(Enum):
+    """
+    Enum used to compare function growth
+    """
     STRICT_INCR = auto()
     INCR = auto()
     CONST = auto()
@@ -255,11 +304,58 @@ class Growth(Enum):
 
     @staticmethod
     def compare(a: float, b: float):
+        if isclose(a, b):
+            return Growth.CONST
         if a > b:
             return Growth.STRICT_DECR
         if a < b:
             return Growth.STRICT_INCR
-        return Growth.CONST
+
+
+class BinaryResult(Enum):
+    """
+    Allows easy aggregation and printing of test results
+    """
+    FAILED = True
+    PASSED = False
+
+    def __add__(self, other: BinaryResult):
+        """
+        An aggregation of test failed if at least one test failed
+        """
+        try:
+            if self.value | other.value:
+                return BinaryResult.FAILED
+            else:
+                return BinaryResult.PASSED
+        except:
+            print(self, self.value)
+            print(other, other.value)
+
+    def __truediv__(self, other: Any):
+        """
+        Identity function, it's defined just so ScoreHolder.average can be reused
+        """
+        return self
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    def __str__(self) -> str:
+        if self.value:
+            return 'X'
+        else:
+            return 'V'
+
+    @staticmethod
+    def get_binary_result(has_passed: bool) -> BinaryResult:
+        """
+        Converts a boolean in a BinaryResult
+        """
+        if has_passed:
+            return BinaryResult.PASSED
+        else:
+            return BinaryResult.FAILED
 
 
 def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:
@@ -272,7 +368,7 @@ def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:
     return e,
 
 
-def evaluate(gold: Partition, sys: Partition) -> ScoreHolder:
+def evaluates(gold: Partition, sys: Partition) -> ScoreHolder:
     """
     Computes metrics scores for a (gold, sys) and outputs it as a Scores
     """
