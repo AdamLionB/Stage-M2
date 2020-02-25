@@ -244,7 +244,7 @@ class ScoreHolder:
         })
 
 
-# TODO comment
+# TODO remove ? usefull ?
 class Growth(Enum):
     """
     Enum used to compare function growth
@@ -313,11 +313,17 @@ class Growth(Enum):
 
 
 class BinaryResult(Enum):
+    """
+    Allows easy aggregation and printing of test results
+    """
     FAILED = True
     PASSED = False
 
     def __add__(self, other: BinaryResult):
-        try :
+        """
+        An aggregation of test failed if at least one test failed
+        """
+        try:
             if self.value | other.value:
                 return BinaryResult.FAILED
             else:
@@ -343,6 +349,9 @@ class BinaryResult(Enum):
 
     @staticmethod
     def get_binary_result(has_passed: bool) -> BinaryResult:
+        """
+        Converts a boolean in a BinaryResult
+        """
         if has_passed:
             return BinaryResult.PASSED
         else:
@@ -359,7 +368,7 @@ def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:
     return e,
 
 
-def evaluate(gold: Partition, sys: Partition) -> ScoreHolder:
+def evaluates(gold: Partition, sys: Partition) -> ScoreHolder:
     """
     Computes metrics scores for a (gold, sys) and outputs it as a Scores
     """

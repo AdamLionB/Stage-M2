@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 # std lib
 from typing import Callable, Tuple, Union, Iterator, Optional
 from inspect import signature
@@ -6,62 +7,66 @@ from os import listdir
 from itertools import product
 from math import isclose
 
-#scorch lib
+# scorch lib
 from scorch.main import clusters_from_json
 
 # this lib
 from partition_utils import Partition, singleton_partition, entity_partition, beta_partition, get_mentions,\
     all_partition_of_size
-from utils import ScoreHolder, evaluate, BinaryResult
+from utils import ScoreHolder, evaluates, BinaryResult
 
 
 def symetry_test(gold: Partition, sys: Partition) -> ScoreHolder:
     """
-    tests whether score(gold, sys) = score(sys, gold)
+    evaluates whether score(gold, sys) = score(sys, gold)
     """
     def intern(x: float, y: float) -> BinaryResult:
         return BinaryResult.get_binary_result(isclose(x, y))
-    return ScoreHolder.apply(evaluate(gold, sys), intern, evaluate(sys, gold))
+    return ScoreHolder.apply(evaluates(gold, sys), intern, evaluates(sys, gold))
 
 
 def singleton_test(gold: Partition) -> ScoreHolder:
-    return evaluate(gold, singleton_partition(get_mentions(gold)))
+    """
+    evaluates the score of a partition against a partition composed only of singletons
+    """
+    return evaluates(gold, singleton_partition(get_mentions(gold)))
 
 
 def entity_test(gold: Partition) -> ScoreHolder:
-    return evaluate(gold, entity_partition(get_mentions(gold)))
+    """
+    evaluates the score of a partition against a partition composed of only one entity
+    """
+    return evaluates(gold, entity_partition(get_mentions(gold)))
 
 
 def non_identity_test(gold: Partition, sys: Partition) -> Optional[ScoreHolder]:
     """
-    tests whether score(gold, sys) != 1 with gold != sys
+    evaluates whether score(gold, sys) != 1 with gold != sys
     """
     def intern(x: float):
         return BinaryResult.get_binary_result(not isclose(x, 1))
     if gold == sys:
         return None
-    return evaluate(gold, sys).apply_to_values(intern)
+    return evaluates(gold, sys).apply_to_values(intern)
 
 
 def identity_test(gold: Partition) -> ScoreHolder:
     """
-    tests wether score(gold, gold) =1
+    evaluates whether score(gold, gold) = 1
     """
     def intern(x: float):
         return BinaryResult.get_binary_result(isclose(x, 1))
-    return evaluate(gold, gold).apply_to_values(intern)
-
-
-def distance_triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
-    def intern(x: float, y: float) -> BinaryResult:
-        return BinaryResult.get_binary_result(isclose(x, y) or x < y)
-    return ScoreHolder.apply(evaluate(a, c), intern, evaluate(a, b) + evaluate(b, c))
+    return evaluates(gold, gold).apply_to_values(intern)
 
 
 def triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
+    """
+    evaluates whether the (similarity) triangle inequality is respected
+    s(a,b) + s(b,c) <= s(b,b) + s(a,b)
+    """
     def intern(x: float, y:float) -> BinaryResult:
-        return BinaryResult.get_binary_result(isclose(x, y) or x > y)
-    return ScoreHolder.apply(evaluate(b, b) + evaluate(a, c), intern, evaluate(a, b) + evaluate(b, c))
+        return BinaryResult.get_binary_result(isclose(x, y) or x < y)
+    return ScoreHolder.apply(evaluates(a, b) + evaluates(b, c), intern, evaluates(b, b) + evaluates(a, c))
 
 
 def randomized_test(
@@ -71,15 +76,19 @@ def randomized_test(
         repetitions: int = 100,
         beta_param: Tuple[float, float] = (1, 1)
 ) -> Union[Tuple[ScoreHolder, ScoreHolder], ScoreHolder]:
+    """
+    Apply the given test function to partitions randomly generated with partition_generators
+    """
     def intern(m) -> Iterator[ScoreHolder]:
-        n = len(signature(test_func).parameters)
+        n_args = len(signature(test_func).parameters)
+        # repeats the test 'repetitions' times
         for _ in range(repetitions):
+            # if no partition_generator is given partition will follow a beta partition
             if partition_generators is None:
-                a = (beta_partition(*beta_param, m) for _ in range(n))
+                a = (beta_partition(*beta_param, m) for _ in range(n_args))
             else:
-                if len(partition_generators) != n:
-                    # TODO exception
-                    raise Exception(f'got {len(partition_generators)} partition generator, expected {n}')
+                if len(partition_generators) != n_args:
+                    raise Exception(f'got {len(partition_generators)} partition generator, expected {n_args}')
                 a = (part(m) for part in partition_generators)
             res = test_func(*a)
             if res is not None:
@@ -100,15 +109,17 @@ def fixed_gold_randomized_test(
         beta_param: Tuple[float, float] = (1, 1)
 ) -> Union[Tuple[ScoreHolder, ScoreHolder], ScoreHolder]:
     def intern() -> Iterator[ScoreHolder]:
-        n = len(signature(test_func).parameters) - 1
+        n_agrs = len(signature(test_func).parameters) - 1
         for gold in it:
             m = get_mentions(gold)
+            # repeats the test 'repetitions' times
             for _ in range(repetitions):
+                # if no partition_generator is given partition will follow a beta partition
                 if partition_generators is None:
-                    a = (beta_partition(*beta_param, m) for _ in range(n))
+                    a = (beta_partition(*beta_param, m) for _ in range(n_agrs))
                 else:
-                    if len(partition_generators) != n:
-                        raise Exception(f'got {len(partition_generators)} partition generator, expected {n}')
+                    if len(partition_generators) != n_agrs:
+                        raise Exception(f'got {len(partition_generators)} partition generator, expected {n_agrs}')
                     a = (part(m) for part in partition_generators)
             res = test_func(gold, *a)
             if res is not None:

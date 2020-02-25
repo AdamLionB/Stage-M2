@@ -6,12 +6,18 @@ T = TypeVar('T')
 
 
 def get_entity(partition: Partition, mention: T) -> Optional[T]:
+    """
+    Get the entity to which the mention refer
+    """
     for entity in partition:
         if mention in entity:
             return entity
 
 
 def lea_sub(keys: Partition, response: Partition) -> float:
+    """
+    Computes LEA recall / precision
+    """
     correct_link_ratio = 0
     nb_mentions = 0
 
@@ -39,6 +45,9 @@ def lea_sub(keys: Partition, response: Partition) -> float:
 
 
 def lea(keys: Partition, response: Partition) -> Tuple[float, float, float]:
+    """
+    Computes LEA Recall, Precision and F-measure
+    """
     R = lea_sub(keys, response)
     P = lea_sub(response, keys)
     F = (2 * P * R) / (P + R) if R+P != 0 else 0
@@ -46,7 +55,9 @@ def lea(keys: Partition, response: Partition) -> Tuple[float, float, float]:
 
 
 def edit(keys: Partition, response: Partition) -> float:
+    """
+    Computes an edit distance between two partitions (very high complexity, not viable)
+    """
     return max((sum(len(a.intersection(b)) for a, b in zip(keys, perm)) for perm in permutations(response))) / len(get_mentions(keys))
 
-def edit2(keys, response):
-    {}
+

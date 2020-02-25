@@ -16,7 +16,7 @@ from collections import defaultdict
 from enum import Enum, auto
 from inspect import signature
 
-from utils import ScoreHolder, evaluate
+from utils import ScoreHolder, evaluates
 from partition_utils import Partition, beta_partition, entity_partition, singleton_partition, get_mentions
 from property_tests import symetry_test, singleton_test, entity_test, randomized_test, ancor_gold_randomized_test
 import math
@@ -188,7 +188,7 @@ def score_random_partitions(
     """
     for n, k in enumerate(golds):
         syss: Iterator[Partition] = (partition_generator(get_mentions(k)) for _ in range(1))
-        yield ScoreHolder.average(map(lambda r: evaluate(k, r), syss))
+        yield ScoreHolder.average(map(lambda r: evaluates(k, r), syss))
 
 
 # start = time()
@@ -227,13 +227,13 @@ def duplicate_clusters(gold: Partition, sys: Partition) -> Tuple[Partition, Part
 
 
 def scale_test(gold: Partition, sys: Partition) -> ScoreHolder:
-    score_a = evaluate(gold, sys)
-    score_b = evaluate(*duplicate_clusters(gold, sys))
+    score_a = evaluates(gold, sys)
+    score_b = evaluates(*duplicate_clusters(gold, sys))
     return score_a.compare(score_b)
 
 
 def true_test(gold: Partition, sys: Partition) -> ScoreHolder:
-    a = evaluate(gold, sys)
+    a = evaluates(gold, sys)
     t = a['true']
     return a.compare_t(t)
 
@@ -318,4 +318,4 @@ d = [{1, 2, 3, 4, 5, 13}, {6, 7, 14}, {10, 11, 12}, {8, 9}]
 e = [{1, 2, 3, 4, 5, 14}, {6, 7, 13}, {10, 11, 12}, {8, 9}]
 l = [b, c, d, e, z, y, a]
 for i in l:
-    print(evaluate(a, i))
+    print(evaluates(a, i))

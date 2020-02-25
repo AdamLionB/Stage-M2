@@ -1,4 +1,4 @@
-from property_tests import randomized_test, ancor_gold_randomized_test, symetry_test, singleton_test, entity_test, identity_test, distance_triangle_test
+from property_tests import randomized_test, ancor_gold_randomized_test, symetry_test, singleton_test, entity_test, identity_test, triangle_test
 from partition_utils import beta_partition
 from utils import ScoreHolder
 from functools import partial
@@ -10,14 +10,14 @@ A = {1: {singleton_test: ('test singleton', True),
          entity_test: ('test entité', True),
          identity_test: ('test identité', False)},
      2: {symetry_test: ('test de symetry', False)},
-     3: {distance_triangle_test: ('test id triangulaire', False)}
+     3: {triangle_test: ('test id triangulaire', False)}
      }
 
 B = {1: {singleton_test: ('test singleton', True),
          entity_test: ('test entité', True),
          identity_test: ('test identité', False)},
      2: {symetry_test: ('test de symetry', False)},
-     3: {distance_triangle_test: ('test id triangulaire', False)}
+     3: {triangle_test: ('test id triangulaire', False)}
      }
 
 def g(repeat, test, std):
