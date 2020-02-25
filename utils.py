@@ -342,11 +342,11 @@ class BinaryResult(Enum):
             return 'V'
 
     @staticmethod
-    def get_binary_result(has_failed: bool) -> BinaryResult:
-        if has_failed:
-            return BinaryResult.FAILED
-        else:
+    def get_binary_result(has_passed: bool) -> BinaryResult:
+        if has_passed:
             return BinaryResult.PASSED
+        else:
+            return BinaryResult.FAILED
 
 
 def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:

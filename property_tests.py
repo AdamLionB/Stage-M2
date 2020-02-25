@@ -20,7 +20,7 @@ def symetry_test(gold: Partition, sys: Partition) -> ScoreHolder:
     tests whether score(gold, sys) = score(sys, gold)
     """
     def intern(x: float, y: float) -> BinaryResult:
-        return BinaryResult.get_binary_result(not isclose(x, y))
+        return BinaryResult.get_binary_result(isclose(x, y))
     return ScoreHolder.apply(evaluate(gold, sys), intern, evaluate(sys, gold))
 
 
@@ -37,7 +37,7 @@ def non_identity_test(gold: Partition, sys: Partition) -> Optional[ScoreHolder]:
     tests whether score(gold, sys) != 1 with gold != sys
     """
     def intern(x: float):
-        return BinaryResult.get_binary_result(isclose(x, 1))
+        return BinaryResult.get_binary_result(not isclose(x, 1))
     if gold == sys:
         return None
     return evaluate(gold, sys).apply_to_values(intern)
@@ -48,23 +48,22 @@ def identity_test(gold: Partition) -> ScoreHolder:
     tests wether score(gold, gold) =1
     """
     def intern(x: float):
-        return BinaryResult.get_binary_result(not isclose(x, 1))
+        return BinaryResult.get_binary_result(isclose(x, 1))
     return evaluate(gold, gold).apply_to_values(intern)
 
 
 def distance_triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
     def intern(x: float, y: float) -> BinaryResult:
-        return BinaryResult.get_binary_result(not(isclose(x, y) or x < y))
+        return BinaryResult.get_binary_result(isclose(x, y) or x < y)
     return ScoreHolder.apply(evaluate(a, c), intern, evaluate(a, b) + evaluate(b, c))
 
 
 def triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
     def intern(x: float, y:float) -> BinaryResult:
-        return BinaryResult.get_binary_result(not (isclose(x, y) or x > y))
+        return BinaryResult.get_binary_result(isclose(x, y) or x > y)
     return ScoreHolder.apply(evaluate(b, b) + evaluate(a, c), intern, evaluate(a, b) + evaluate(b, c))
 
 
-# TODO rename
 def randomized_test(
         test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
         partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
