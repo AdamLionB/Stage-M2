@@ -6,6 +6,7 @@ from inspect import signature
 from os import listdir
 from itertools import product
 from math import isclose
+from functools import partial
 
 # scorch lib
 from scorch.main import clusters_from_json
@@ -13,36 +14,36 @@ from scorch.main import clusters_from_json
 # this lib
 from partition_utils import Partition, singleton_partition, entity_partition, beta_partition, get_mentions,\
     all_partition_of_size
-from utils import ScoreHolder, evaluates, BinaryResult
+from utils import ScoreHolder, evaluates, EasyFail, HardFail
 
 
 def a1_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> BinaryResult:
-        return BinaryResult.has_passed_test(not isclose(x, y) and x > y)
+    def intern(x: float, y: float) -> EasyFail:
+        return EasyFail.has_passed_test(not isclose(x, y) and x > y)
     gold = [{1, 2}, {3}, {4}]
     sys = [{1, 2}, {3, 4}]
     return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
 
 
 def a2_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> BinaryResult:
-        return BinaryResult.has_passed_test(not isclose(x, y) and x > y)
+    def intern(x: float, y: float) -> EasyFail:
+        return EasyFail.has_passed_test(not isclose(x, y) and x > y)
     gold = [{3}, {4}]
     sys = [{3, 4}]
     return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
 
 
 def a3_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> BinaryResult:
-        return BinaryResult.has_passed_test(not isclose(x, y) and x > y)
-    gold = [{1, 2}, {3}, {4}]
+    def intern(x: float, y: float) -> EasyFail:
+        return EasyFail.has_passed_test(not isclose(x, y) and x > y)
+    gold = [{1, 2}, {3}]
     sys = [{1, 2, 3}]
     return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
 
 
 def b1_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> BinaryResult:
-        return BinaryResult.get_binary_result(not isclose(x, y) and x < y)
+    def intern(x: float, y: float) -> EasyFail:
+        return EasyFail.has_passed_test(not isclose(x, y) and x < y)
     gold = [{1, 2}, {3, 4, 5}]
     sys1 = [{1, 2, 3}, {4, 5}]
     sys2 = [{1, 2, 3, 4, 5}]
@@ -50,8 +51,8 @@ def b1_test() -> ScoreHolder:
 
 
 def b2_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> BinaryResult:
-        return BinaryResult.get_binary_result(not isclose(x, y) and x < y)
+    def intern(x: float, y: float) -> EasyFail:
+        return EasyFail.has_passed_test(not isclose(x, y) and x < y)
     gold = [{1, 2, 3, 4, 5}, {6, 7}]
     sys1 = [{1, 2, 3, 4}, {5, 6, 7}]
     sys2 = [{1, 2}, {3, 4, 5}, {6, 7}]
@@ -59,8 +60,8 @@ def b2_test() -> ScoreHolder:
 
 
 def d1_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> BinaryResult:
-        return BinaryResult.get_binary_result(isclose(x, y))
+    def intern(x: float, y: float) -> EasyFail:
+        return EasyFail.has_passed_test(isclose(x, y))
     gold1 = [{1, 2}, {3, 4}, {5, 6}]
     sys1 = [{1, 3}, {2, 4}, {5, 6}]
     gold2 = [{1, 2}, {3, 4}, {5, 6, 7, 8}]
@@ -69,17 +70,17 @@ def d1_test() -> ScoreHolder:
 
 
 def d2_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> BinaryResult:
-        return BinaryResult.get_binary_result(isclose(x, y))
+    def intern(x: float, y: float) -> EasyFail:
+        return EasyFail.has_passed_test(isclose(x, y))
     gold = [{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13}, {14, 15, 16}]
     sys1 = [{1, 2, 3, 4, 6}, {5, 7, 8, 9, 10}, {11, 12, 13}, {14, 15, 16}]
     sys2 = [{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 14}, {13, 15, 16}]
     return ScoreHolder.apply(evaluates(gold, sys1), intern, evaluates(gold, sys2))
 
 
-def f_test(gold: Partition, sys:Partition) -> ScoreHolder:
-    def intern(x: float) -> BinaryResult:
-        return BinaryResult.get_binary_result(not isclose(x, 0))
+def f_test(gold: Partition, sys: Partition) -> ScoreHolder:
+    def intern(x: float) -> HardFail:
+        return HardFail.has_passed_test(isclose(x, 0))
     return ScoreHolder.apply_to_values(evaluates(gold, sys), intern)
 
 
@@ -87,8 +88,8 @@ def symetry_test(gold: Partition, sys: Partition) -> ScoreHolder:
     """
     evaluates whether score(gold, sys) = score(sys, gold)
     """
-    def intern(x: float, y: float) -> BinaryResult:
-        return BinaryResult.has_passed_test(isclose(x, y))
+    def intern(x: float, y: float) -> EasyFail:
+        return EasyFail.has_passed_test(isclose(x, y))
     return ScoreHolder.apply(evaluates(gold, sys), intern, evaluates(sys, gold))
 
 
@@ -110,8 +111,8 @@ def non_identity_test(gold: Partition, sys: Partition) -> Optional[ScoreHolder]:
     """
     evaluates whether score(gold, sys) != 1 with gold != sys
     """
-    def intern(x: float):
-        return BinaryResult.has_passed_test(not isclose(x, 1))
+    def intern(x: float) -> EasyFail:
+        return EasyFail.has_passed_test(not isclose(x, 1))
     if gold == sys:
         return None
     return evaluates(gold, sys).apply_to_values(intern)
@@ -121,8 +122,8 @@ def identity_test(gold: Partition) -> ScoreHolder:
     """
     evaluates whether score(gold, gold) = 1
     """
-    def intern(x: float):
-        return BinaryResult.has_passed_test(isclose(x, 1))
+    def intern(x: float) -> EasyFail:
+        return EasyFail.has_passed_test(isclose(x, 1))
     return evaluates(gold, gold).apply_to_values(intern)
 
 
@@ -131,8 +132,8 @@ def triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
     evaluates whether the (similarity) triangle inequality is respected
     s(a,b) + s(b,c) <= s(b,b) + s(a,b)
     """
-    def intern(x: float, y:float) -> BinaryResult:
-        return BinaryResult.has_passed_test(isclose(x, y) or x < y)
+    def intern(x: float, y:float) -> EasyFail:
+        return EasyFail.has_passed_test(isclose(x, y) or x < y)
     return ScoreHolder.apply(evaluates(a, b) + evaluates(b, c), intern, evaluates(b, b) + evaluates(a, c))
 
 
@@ -222,8 +223,67 @@ def all_partitions_test(
     if std:
         return ScoreHolder.avg_std(ScoreHolder.average(intern(i)) for i in range(start, end))
     else:
-        return  ScoreHolder.average(ScoreHolder.average(intern(i))for i in range(start, end))
+        return ScoreHolder.average(ScoreHolder.average(intern(i))for i in range(start, end))
 
+
+class A:
+    distributions = [partial(beta_partition, a=1, b=1), partial(beta_partition, a=1, b=100)]
+    def __init__(self,
+                 test_func: Callable[[Partition, ...], ScoreHolder],
+                 descr_str: str,
+                 on_corpus: bool = False,
+                 repetitions: int = 100,
+                 std: bool = False,
+                 start: int = 1,
+                 end: int = 5):
+        self.test_func = test_func
+        self.descr_str = descr_str
+        self.on_corpus = on_corpus
+        self.repetitions = repetitions
+        self.std = std
+        self.start = start
+        self.end = end
+    def f(self):
+        n_args = len(signature(self.test_func).parameters)
+
+        def intern1() -> Iterator[ScoreHolder]:
+            yield all_partitions_test(self.test_func, start=self.start, end=self.end)
+
+        def intern2() -> Iterator[ScoreHolder]:
+            for dists in product(A.distributions, repeat=n_args):
+                yield randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions)
+
+        def intern3(repeat) -> Iterator[ScoreHolder]:
+            for dists in product(A.distributions, repeat=repeat):
+                yield ancor_gold_randomized_test(self.test_func, partition_generators=dists)
+
+        if n_args != 0:
+            yield ScoreHolder.average(intern1())
+            if self.on_corpus:
+                yield intern3(self.repetitions if n_args != 1 else 1)
+        yield ScoreHolder.average(intern2())
+    def g(self):
+        print(self.descr_str)
+        print(ScoreHolder.average(self.f()))
+        print('-------------')
+
+
+ALL_TESTS = {
+    a1_test:            A(a1_test, 'a1', repetitions=1),
+    a2_test:            A(a2_test, 'a2', repetitions=1),
+    a3_test:            A(a3_test, 'a3', repetitions=1),
+    b1_test:            A(b1_test, 'b1', repetitions=1),
+    b2_test:            A(b2_test, 'b2', repetitions=1),
+    d1_test:            A(d1_test, 'd1', repetitions=1),
+    d2_test:            A(d2_test, 'd2', repetitions=1),
+    identity_test:      A(identity_test, 'e1 | identity', repetitions=100),
+    non_identity_test:  A(non_identity_test, 'e2 | non_identity', repetitions=100, start=2),
+    f_test:             A(f_test, 'f', repetitions=100),
+    triangle_test:      A(triangle_test, 'g | triangle', repetitions=100),
+    symetry_test:       A(symetry_test, 'h | symetry', repetitions=100),
+    singleton_test:     A(singleton_test, 'singleton', repetitions=100),
+    entity_test:        A(entity_test, 'entity', repetitions=100),
+}
 
 
 # TODO generalise for any json format

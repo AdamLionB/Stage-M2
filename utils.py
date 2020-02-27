@@ -312,25 +312,10 @@ class Growth(Enum):
             return Growth.STRICT_INCR
 
 
-class BinaryResult(Enum):
+class BinaryResult:
     """
     Allows easy aggregation and printing of test results
     """
-    FAILED = True
-    PASSED = False
-
-    def __add__(self, other: BinaryResult):
-        """
-        An aggregation of test failed if at least one test failed
-        """
-        try:
-            if self.value | other.value:
-                return BinaryResult.FAILED
-            else:
-                return BinaryResult.PASSED
-        except:
-            print(self, self.value)
-            print(other, other.value)
 
     def __truediv__(self, other: Any):
         """
@@ -343,19 +328,51 @@ class BinaryResult(Enum):
 
     def __str__(self) -> str:
         if self.value:
-            return 'X'
-        else:
             return 'V'
+        else:
+            return 'X'
+
+
+class EasyFail(BinaryResult, Enum):
+    FAILED = False
+    PASSED = True
+
+    def __add__(self, other: EasyFail) -> EasyFail:
+        if self.value & other.value:
+            return EasyFail.PASSED
+        else:
+            return EasyFail.FAILED
 
     @staticmethod
-    def has_passed_test(has_passed: bool) -> BinaryResult:
+    def has_passed_test(has_passed: bool) -> EasyFail:
         """
-        Converts a boolean in a BinaryResult
+        Converts a boolean in an EasyFail BinaryResult
         """
         if has_passed:
-            return BinaryResult.PASSED
+            return EasyFail.PASSED
         else:
-            return BinaryResult.FAILED
+            return EasyFail.FAILED
+
+
+class HardFail(BinaryResult, Enum):
+    FAILED = False
+    PASSED = True
+
+    def __add__(self, other: HardFail) -> HardFail:
+        if self.value | other.value:
+            return HardFail.PASSED
+        else:
+            return HardFail.FAILED
+
+    @staticmethod
+    def has_passed_test(has_passed: bool) -> HardFail:
+        """
+        Converts a boolean in an HardFail BinaryResult
+        """
+        if has_passed:
+            return HardFail.PASSED
+        else:
+            return HardFail.FAILED
 
 
 def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:

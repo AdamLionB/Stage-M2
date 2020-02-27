@@ -21,7 +21,7 @@ def f(test_func: Callable[[Partition, ...], ScoreHolder], start=1, end=5, repeti
 print(ScoreHolder.average(f(identity_test)))
 print(ScoreHolder.average(f(non_identity_test, start=2)))
 print(ScoreHolder.average(f(symetry_test)))
-print(ScoreHolder.average(f(triangle_test, repetitions=200)))
+print(ScoreHolder.average(f(triangle_test)))
 
 
 
