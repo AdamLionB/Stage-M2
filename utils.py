@@ -174,37 +174,6 @@ class ScoreHolder:
     def __repr__(self) -> str:
         return str(self)
 
-    @staticmethod
-    def average(scoress: Iterator[ScoreHolder]) -> ScoreHolder:
-        """
-        Outputs the average ScoreHolder of an iterator.
-        All of the ScoreHolder in the iterator have to have the same strucutre,
-        meanings the same keys, in the same order and tuples of similar size for each key
-        """
-        res = next(scoress)
-        count = 1
-        for scores in scoress:
-            res += scores
-            count += 1
-        return res / count
-
-    @staticmethod
-    def avg_std(scoress: Iterator[ScoreHolder]) -> Tuple[ScoreHolder, ScoreHolder]:
-        """
-        Outputs the average and standard deviation ScoreHolder of an iterator.
-        All of the ScoreHolder in the iterator have to have the same strucutre,
-        meanings the same keys, in the same order and tuples of similar size for each key
-        """
-        regular_sum = next(scoress)
-        squared_sum = regular_sum ** 2
-        count = 1
-        for scores in scoress:
-            regular_sum += scores
-            squared_sum += scores ** 2
-            count += 1
-        return (regular_sum / count,
-                ((squared_sum - (regular_sum ** 2) / count) / count) ** (1 / 2))
-
     def compare(self, other: ScoreHolder) -> ScoreHolder:
         """
         Outputs the result of the comparison of a ScoreHolder to another.

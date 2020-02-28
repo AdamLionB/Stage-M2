@@ -14,7 +14,7 @@ from scorch.main import clusters_from_json
 # this lib
 from partition_utils import Partition, singleton_partition, entity_partition, beta_partition, get_mentions, \
     all_partition_of_size
-from utils import ScoreHolder, evaluates, EasyFail, HardFail
+from utils import ScoreHolder, evaluates, EasyFail, HardFail, to_tuple
 
 
 def a1_test() -> ScoreHolder:
@@ -156,34 +156,26 @@ def triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
 def randomized_test(
         test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
         partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
-        std: bool = False,
         repetitions: int = 100,
         beta_param: Tuple[float, float] = (1, 1)
-) -> Union[Tuple[ScoreHolder, ScoreHolder], ScoreHolder]:
+) -> Iterator[ScoreHolder]:
     """
     Apply the given test function to partitions randomly generated with partition_generators
     """
-
-    def intern(m) -> Iterator[ScoreHolder]:
-        n_args = len(signature(test_func).parameters)
-        # repeats the test 'repetitions' times
-        for _ in range(repetitions):
-            # if no partition_generator is given partition will follow a beta partition
-            if partition_generators is None:
-                a = (beta_partition(*beta_param, m) for _ in range(n_args))
-            else:
-                if len(partition_generators) != n_args:
-                    raise Exception(f'got {len(partition_generators)} partition generator, expected {n_args}')
-                a = (part(m) for part in partition_generators)
-            res = test_func(*a)
-            if res is not None:
-                yield res
-
-    mentions = list(range(100))
-    if std:
-        return ScoreHolder.avg_std(intern(mentions))
-    else:
-        return ScoreHolder.average(intern(mentions))
+    n_args = len(signature(test_func).parameters)
+    m = list(range(100))
+    # repeats the test 'repetitions' times
+    for _ in range(repetitions):
+        # if no partition_generator is given partition will follow a beta partition
+        if partition_generators is None:
+            a = (beta_partition(*beta_param, m) for _ in range(n_args))
+        else:
+            if len(partition_generators) != n_args:
+                raise Exception(f'got {len(partition_generators)} partition generator, expected {n_args}')
+            a = (part(m) for part in partition_generators)
+        res = test_func(*a)
+        if res is not None:
+            yield res
 
 
 def fixed_gold_randomized_test(
@@ -193,28 +185,22 @@ def fixed_gold_randomized_test(
         std: bool = False,
         repetitions: int = 100,
         beta_param: Tuple[float, float] = (1, 1)
-) -> Union[Tuple[ScoreHolder, ScoreHolder], ScoreHolder]:
-    def intern() -> Iterator[ScoreHolder]:
-        n_agrs = len(signature(test_func).parameters) - 1
-        for gold in it:
-            m = get_mentions(gold)
-            # repeats the test 'repetitions' times
-            for _ in range(repetitions):
-                # if no partition_generator is given partition will follow a beta partition
-                if partition_generators is None:
-                    a = (beta_partition(*beta_param, m) for _ in range(n_agrs))
-                else:
-                    if len(partition_generators) != n_agrs:
-                        raise Exception(f'got {len(partition_generators)} partition generator, expected {n_agrs}')
-                    a = (part(m) for part in partition_generators)
-            res = test_func(gold, *a)
-            if res is not None:
-                yield res
-
-    if std:
-        return ScoreHolder.avg_std(intern())
-    else:
-        return ScoreHolder.average(intern())
+) -> Iterator[ScoreHolder]:
+    n_agrs = len(signature(test_func).parameters) - 1
+    for gold in it:
+        m = get_mentions(gold)
+        # repeats the test 'repetitions' times
+        for _ in range(repetitions):
+            # if no partition_generator is given partition will follow a beta partition
+            if partition_generators is None:
+                a = (beta_partition(*beta_param, m) for _ in range(n_agrs))
+            else:
+                if len(partition_generators) != n_agrs:
+                    raise Exception(f'got {len(partition_generators)} partition generator, expected {n_agrs}')
+                a = (part(m) for part in partition_generators)
+        res = test_func(gold, *a)
+        if res is not None:
+            yield res
 
 
 def ancor_gold_randomized_test(
@@ -223,31 +209,23 @@ def ancor_gold_randomized_test(
         std: bool = False,
         repetitions: int = 100,
         beta_param: Tuple[float, float] = (1, 1)
-) -> Union[Tuple[ScoreHolder, ScoreHolder], ScoreHolder]:
+) -> Iterator[ScoreHolder]:
     return fixed_gold_randomized_test(test_func, iter_ancor(), partition_generators=partition_generators, std=std,
                                       repetitions=repetitions, beta_param=beta_param)
 
 
 def all_partitions_test(
         test_func: Callable[[Partition], Optional[ScoreHolder]],
-        std: bool = False,
-        start: int = 1,
-        end: int = 2
-) -> Union[Tuple[ScoreHolder, ScoreHolder], ScoreHolder]:
-    def intern(i) -> Iterator[ScoreHolder]:
-        n_args = len(signature(test_func).parameters)
-        for args in product(all_partition_of_size(i), repeat=n_args):
-            res = test_func(*args)
-            if res is not None:
-                yield res
-
-    if std:
-        return ScoreHolder.avg_std(ScoreHolder.average(intern(i)) for i in range(start, end))
-    else:
-        return ScoreHolder.average(ScoreHolder.average(intern(i)) for i in range(start, end))
+        i: int = 1
+) -> Iterator[ScoreHolder]:
+    n_args = len(signature(test_func).parameters)
+    for args in product(all_partition_of_size(i), repeat=n_args):
+        res = test_func(*args)
+        if res is not None:
+            yield res
 
 
-class A:
+class tmp_class:
     distributions = [partial(beta_partition, a=1, b=1), partial(beta_partition, a=1, b=100)]
 
     def __init__(
@@ -269,45 +247,105 @@ class A:
         self.start = start
         self.end = end
 
+    @staticmethod
+    def avg_tuples(score_holderss: Iterator[Tuple[ScoreHolder, ...]]) -> Tuple[ScoreHolder, ...]:
+        """
+        Outputs the average ScoreHolder of an iterator.
+        All of the ScoreHolder in the iterator have to have the same strucutre,
+        meanings the same keys, in the same order and tuples of similar size for each key
+        """
+        ress = list(next(score_holderss))
+        count = 1
+        for score_holders in score_holderss:
+            for n, score_holder in enumerate(score_holders):
+                ress[n] += score_holder
+            count += 1
+        for n, score_holder in enumerate(ress):
+            ress[n] /= count
+        return tuple(ress)
+
+    @staticmethod
+    def average(scoress: Iterator[ScoreHolder]) -> ScoreHolder:
+        """
+        Outputs the average ScoreHolder of an iterator.
+        All of the ScoreHolder in the iterator have to have the same strucutre,
+        meanings the same keys, in the same order and tuples of similar size for each key
+        """
+        res = next(scoress)
+        count = 1
+        for scores in scoress:
+            res += scores
+            count += 1
+        return res / count
+
+    @staticmethod
+    def avg_std(scoress: Iterator[ScoreHolder]) -> Tuple[ScoreHolder, ScoreHolder]:
+        """
+        Outputs the average and standard deviation ScoreHolder of an iterator.
+        All of the ScoreHolder in the iterator have to have the same strucutre,
+        meanings the same keys, in the same order and tuples of similar size for each key
+        """
+        regular_sum = next(scoress)
+        squared_sum = regular_sum ** 2
+        count = 1
+        for scores in scoress:
+            regular_sum += scores
+            squared_sum += scores ** 2
+            count += 1
+        return (regular_sum / count,
+                ((squared_sum - (regular_sum ** 2) / count) / count) ** (1 / 2))
+
+
+    def agreg(self, it: Iterator[ScoreHolder]) -> Iterator[ScoreHolder]:
+        if self.std:
+            return tmp_class.avg_std(it)
+        else:
+            return tmp_class.average(it)
+
     def intern1(self) -> Iterator[ScoreHolder]:
-        yield all_partitions_test(self.test_func, start=self.start, end=self.end)
+        for i in range(self.start, self.end):
+            yield self.agreg(all_partitions_test(self.test_func, i=i))
 
     def intern2(self) -> Iterator[ScoreHolder]:
-        for dists in product(A.distributions, repeat=self.n_args):
-            yield randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions)
+        for dists in product(tmp_class.distributions, repeat=self.n_args):
+            yield self.agreg(randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions))
 
     def intern3(self, repeat) -> Iterator[ScoreHolder]:
-        for dists in product(A.distributions, repeat=repeat):
-            yield ancor_gold_randomized_test(self.test_func, partition_generators=dists)
+        for dists in product(tmp_class.distributions, repeat=repeat):
+            yield self.agreg(ancor_gold_randomized_test(self.test_func, partition_generators=dists))
 
     def f(self):
         if self.n_args != 0:
-            yield ScoreHolder.average(self.intern1())
+            yield tmp_class.avg_tuples(map(to_tuple, self.intern1()))
             if self.on_corpus:
-                yield self.intern3(self.repetitions if self.n_args != 1 else 1)
-        yield ScoreHolder.average(self.intern2())
+                yield tmp_class.avg_tuples(map(to_tuple, self.intern3(self.repetitions if self.n_args != 1 else 1)))
+        yield tmp_class.avg_tuples(map(to_tuple, self.intern2()))
 
     def g(self):
         print(self.descr_str)
-        print(ScoreHolder.average(self.f()))
+        for x in tmp_class.avg_tuples(self.f()):
+            print(x)
         print('-------------')
+
+    def h(self):
+        map(to_tuple, self.intern1())
 
 
 ALL_TESTS = {
-    a1_test: A(a1_test, 'a1', repetitions=1),
-    a2_test: A(a2_test, 'a2', repetitions=1),
-    a3_test: A(a3_test, 'a3', repetitions=1),
-    b1_test: A(b1_test, 'b1', repetitions=1),
-    b2_test: A(b2_test, 'b2', repetitions=1),
-    d1_test: A(d1_test, 'd1', repetitions=1),
-    d2_test: A(d2_test, 'd2', repetitions=1),
-    identity_test: A(identity_test, 'e1 | identity', repetitions=100),
-    non_identity_test: A(non_identity_test, 'e2 | non_identity', repetitions=100, start=2),
-    f_test: A(f_test, 'f', repetitions=100),
-    triangle_test: A(triangle_test, 'g | triangle', repetitions=100),
-    symetry_test: A(symetry_test, 'h | symetry', repetitions=100),
-    singleton_test: A(singleton_test, 'singleton', repetitions=100),
-    entity_test: A(entity_test, 'entity', repetitions=100),
+    a1_test: tmp_class(a1_test, 'a1', repetitions=1),
+    a2_test: tmp_class(a2_test, 'a2', repetitions=1),
+    a3_test: tmp_class(a3_test, 'a3', repetitions=1),
+    b1_test: tmp_class(b1_test, 'b1', repetitions=1),
+    b2_test: tmp_class(b2_test, 'b2', repetitions=1),
+    d1_test: tmp_class(d1_test, 'd1', repetitions=1),
+    d2_test: tmp_class(d2_test, 'd2', repetitions=1),
+    identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100),
+    non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2),
+    f_test: tmp_class(f_test, 'f', repetitions=100),
+    triangle_test: tmp_class(triangle_test, 'g | triangle', repetitions=100),
+    symetry_test: tmp_class(symetry_test, 'h | symetry', repetitions=100),
+    singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100),
+    entity_test: tmp_class(entity_test, 'entity', repetitions=100),
 }
 
 
