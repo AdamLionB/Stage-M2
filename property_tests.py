@@ -295,35 +295,50 @@ class tmp_class:
         return (regular_sum / count,
                 ((squared_sum - (regular_sum ** 2) / count) / count) ** (1 / 2))
 
-
     def agreg(self, it: Iterator[ScoreHolder]) -> Iterator[ScoreHolder]:
         if self.std:
             return tmp_class.avg_std(it)
         else:
             return tmp_class.average(it)
 
-    def intern1(self) -> Iterator[ScoreHolder]:
+    def intern1(self, verbose: bool =False) -> Iterator[ScoreHolder]:
         for i in range(self.start, self.end):
+            if verbose:
+                print(i)
             yield self.agreg(all_partitions_test(self.test_func, i=i))
 
-    def intern2(self) -> Iterator[ScoreHolder]:
+    def intern2(self, verbose: bool = False) -> Iterator[ScoreHolder]:
         for dists in product(tmp_class.distributions, repeat=self.n_args):
+            if verbose:
+                print(dists)
             yield self.agreg(randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions))
 
-    def intern3(self, repeat) -> Iterator[ScoreHolder]:
-        for dists in product(tmp_class.distributions, repeat=repeat):
-            yield self.agreg(ancor_gold_randomized_test(self.test_func, partition_generators=dists))
+    def intern3(self, verbose: bool = False) -> Iterator[ScoreHolder]:
+        for dists in product(tmp_class.distributions, repeat=self.n_args-1):
+            if verbose:
+                print(dists)
+            yield self.agreg(ancor_gold_randomized_test(
+                self.test_func,
+                partition_generators=dists,
+                repetitions=self.repetitions if self.n_args != 1 else 1
+            ))
 
     def f(self):
         if self.n_args != 0:
             yield tmp_class.avg_tuples(map(to_tuple, self.intern1()))
             if self.on_corpus:
-                yield tmp_class.avg_tuples(map(to_tuple, self.intern3(self.repetitions if self.n_args != 1 else 1)))
+                yield tmp_class.avg_tuples(map(to_tuple, self.intern3()))
         yield tmp_class.avg_tuples(map(to_tuple, self.intern2()))
 
     def g(self):
         print(self.descr_str)
         for x in tmp_class.avg_tuples(self.f()):
+            print(x)
+        print('-------------')
+
+    def g2(self):
+        print(self.descr_str)
+        for x in self.f():
             print(x)
         print('-------------')
 
