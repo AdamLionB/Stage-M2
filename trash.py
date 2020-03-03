@@ -26,9 +26,9 @@ from partition_utils import Partition
 from time import time
 import ast
 import psycopg2
-conn = psycopg2.connect("dbname=Paritions user=postgres password=root")
-cur = conn.cursor()
-print(cur)
+# conn = psycopg2.connect("dbname=Paritions user=postgres password=root")
+# cur = conn.cursor()
+# print(cur)
 #cur.execute("SELECT * FROM test;")
 #print(cur.fetchone())
 def timed(func, *args):
@@ -36,9 +36,6 @@ def timed(func, *args):
 	res = func(*args)
 	print(time() - start)
 	return res
-
-
-
 
 
 

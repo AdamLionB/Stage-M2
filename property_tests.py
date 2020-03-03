@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 # std lib
-from typing import Callable, Tuple, Union, Iterator, Optional
+from typing import Callable, Tuple, Union, Iterator, Optional, Any, TypeVar
 from inspect import signature
 from os import listdir
 from itertools import product
@@ -224,7 +224,9 @@ def all_partitions_test(
         if res is not None:
             yield res
 
-
+T = TypeVar('T')
+U = TypeVar('U')
+V = TypeVar('V')
 class tmp_class:
     distributions = [partial(beta_partition, a=1, b=1), partial(beta_partition, a=1, b=100)]
 
@@ -236,7 +238,11 @@ class tmp_class:
             repetitions: int = 100,
             std: bool = False,
             start: int = 1,
-            end: int = 5
+            end: int = 5,
+            agg= None,
+            init_func1: Callable[[ScoreHolder], T] = lambda x: (1, x),
+            acc1: Callable[[T, T], U] = lambda x, y: (x[0]+1, x[1] + y),
+            acc2: Callable[[U], Any]= lambda x, y: y / x
     ):
         self.test_func = test_func
         self.n_args = len(signature(self.test_func).parameters)
@@ -246,6 +252,16 @@ class tmp_class:
         self.std = std
         self.start = start
         self.end = end
+        self.agg = agg
+        self.acc1= acc1
+        self.init_func = init_func1
+        self.acc2= acc2
+
+    def tmp_a(self):
+        for dists in product(tmp_class.distributions, repeat=self.n_args):
+            yield dists, self.agg(
+                randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions)
+            )
 
     @staticmethod
     def avg_tuples(score_holderss: Iterator[Tuple[ScoreHolder, ...]]) -> Tuple[ScoreHolder, ...]:
@@ -313,6 +329,10 @@ class tmp_class:
                 print(dists)
             yield self.agreg(randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions))
 
+    def intern21(self, verbose: bool = False) -> Iterator[ScoreHolder]:
+        for dists in product(tmp_class.distributions, repeat=self.n_args):
+            yield dists, self.agreg(randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions))
+
     def intern3(self, verbose: bool = False) -> Iterator[ScoreHolder]:
         for dists in product(tmp_class.distributions, repeat=self.n_args-1):
             if verbose:
@@ -345,24 +365,51 @@ class tmp_class:
     def h(self):
         map(to_tuple, self.intern1())
 
+#X = TypeVar('X', bound=...)
+def _a(
+        init_func: Callable[[T], Tuple[U]],
+        acc1: Callable[[Tuple[U], T], Tuple[U]],
+        acc2: Callable[[Tuple[U]], Any],
+        scoress: Iterator[T]
+):
+    res = init_func(next(scoress))
+    for scores in scoress:
+        res = acc1(res, scores)
+    return acc2(res)
+
+_b = partial(_a, lambda x: (x,), lambda x, y: (x[0]+y,), lambda x: x[0])
+_c = partial(_a, lambda x: (x[1],), lambda x, y: (x[0]+y[1],), lambda x: x[0])
+def blup(x, y):
+    res = x + y
+    if x.value and not res.value:
+        y, res
+    return 
+_d = partial(_a, lambda x: (x,), blup, lambda x: x[0]),
+#_c = partial(_a, lambda x, y : (x, y), lambda x, y: (x[0], x[1]+y), lambda x, y: (x, y))
+
 
 ALL_TESTS = {
-    a1_test: tmp_class(a1_test, 'a1', repetitions=1),
-    a2_test: tmp_class(a2_test, 'a2', repetitions=1),
-    a3_test: tmp_class(a3_test, 'a3', repetitions=1),
-    b1_test: tmp_class(b1_test, 'b1', repetitions=1),
-    b2_test: tmp_class(b2_test, 'b2', repetitions=1),
-    d1_test: tmp_class(d1_test, 'd1', repetitions=1),
-    d2_test: tmp_class(d2_test, 'd2', repetitions=1),
-    identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100),
-    non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2),
-    f_test: tmp_class(f_test, 'f', repetitions=100),
-    triangle_test: tmp_class(triangle_test, 'g | triangle', repetitions=100),
-    symetry_test: tmp_class(symetry_test, 'h | symetry', repetitions=100),
-    singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100),
-    entity_test: tmp_class(entity_test, 'entity', repetitions=100),
+    # a1_test: tmp_class(a1_test, 'a1', repetitions=1, init_func1= lambda x: (x,), acc1=lambda x, y : (x[0]+y,), acc2=lambda x: x),
+    #a2_test: tmp_class(a2_test, 'a2', repetitions=1, agg = _b),
+    # a3_test: tmp_class(a3_test, 'a3', repetitions=1),
+    # b1_test: tmp_class(b1_test, 'b1', repetitions=1),
+    # b2_test: tmp_class(b2_test, 'b2', repetitions=1),
+    # d1_test: tmp_class(d1_test, 'd1', repetitions=1),
+    # d2_test: tmp_class(d2_test, 'd2', repetitions=1),
+    identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100, agg= _b),
+    # non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2),
+    # f_test: tmp_class(f_test, 'f', repetitions=100),
+    # triangle_test: tmp_class(triangle_test, 'g | triangle', repetitions=100),
+    # symetry_test: tmp_class(symetry_test, 'h | symetry', repetitions=100),
+    # singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100),
+    # entity_test: tmp_class(entity_test, 'entity', repetitions=100),
 }
+for i in ALL_TESTS[identity_test].tmp_a():
+    print(i)
 
+print(_c(
+    ALL_TESTS[identity_test].tmp_a()
+))
 
 # TODO generalise for any json format
 # TODO generalise for any format ? (with a given read method)
