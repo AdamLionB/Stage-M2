@@ -174,37 +174,6 @@ class ScoreHolder:
     def __repr__(self) -> str:
         return str(self)
 
-    @staticmethod
-    def average(scoress: Iterator[ScoreHolder]) -> ScoreHolder:
-        """
-        Outputs the average ScoreHolder of an iterator.
-        All of the ScoreHolder in the iterator have to have the same strucutre,
-        meanings the same keys, in the same order and tuples of similar size for each key
-        """
-        res = next(scoress)
-        count = 1
-        for scores in scoress:
-            res += scores
-            count += 1
-        return res / count
-
-    @staticmethod
-    def avg_std(scoress: Iterator[ScoreHolder]) -> Tuple[ScoreHolder, ScoreHolder]:
-        """
-        Outputs the average and standard deviation ScoreHolder of an iterator.
-        All of the ScoreHolder in the iterator have to have the same strucutre,
-        meanings the same keys, in the same order and tuples of similar size for each key
-        """
-        regular_sum = next(scoress)
-        squared_sum = regular_sum ** 2
-        count = 1
-        for scores in scoress:
-            regular_sum += scores
-            squared_sum += scores ** 2
-            count += 1
-        return (regular_sum / count,
-                ((squared_sum - (regular_sum ** 2) / count) / count) ** (1 / 2))
-
     def compare(self, other: ScoreHolder) -> ScoreHolder:
         """
         Outputs the result of the comparison of a ScoreHolder to another.
@@ -312,25 +281,10 @@ class Growth(Enum):
             return Growth.STRICT_INCR
 
 
-class BinaryResult(Enum):
+class BinaryResult:
     """
     Allows easy aggregation and printing of test results
     """
-    FAILED = True
-    PASSED = False
-
-    def __add__(self, other: BinaryResult):
-        """
-        An aggregation of test failed if at least one test failed
-        """
-        try:
-            if self.value | other.value:
-                return BinaryResult.FAILED
-            else:
-                return BinaryResult.PASSED
-        except:
-            print(self, self.value)
-            print(other, other.value)
 
     def __truediv__(self, other: Any):
         """
@@ -343,19 +297,51 @@ class BinaryResult(Enum):
 
     def __str__(self) -> str:
         if self.value:
-            return 'X'
-        else:
             return 'V'
+        else:
+            return 'X'
+
+
+class EasyFail(BinaryResult, Enum):
+    FAILED = False
+    PASSED = True
+
+    def __add__(self, other: EasyFail) -> EasyFail:
+        if self.value & other.value:
+            return EasyFail.PASSED
+        else:
+            return EasyFail.FAILED
 
     @staticmethod
-    def get_binary_result(has_passed: bool) -> BinaryResult:
+    def has_passed_test(has_passed: bool) -> EasyFail:
         """
-        Converts a boolean in a BinaryResult
+        Converts a boolean in an EasyFail BinaryResult
         """
         if has_passed:
-            return BinaryResult.PASSED
+            return EasyFail.PASSED
         else:
-            return BinaryResult.FAILED
+            return EasyFail.FAILED
+
+
+class HardFail(BinaryResult, Enum):
+    FAILED = False
+    PASSED = True
+
+    def __add__(self, other: HardFail) -> HardFail:
+        if self.value | other.value:
+            return HardFail.PASSED
+        else:
+            return HardFail.FAILED
+
+    @staticmethod
+    def has_passed_test(has_passed: bool) -> HardFail:
+        """
+        Converts a boolean in an HardFail BinaryResult
+        """
+        if has_passed:
+            return HardFail.PASSED
+        else:
+            return HardFail.FAILED
 
 
 def to_tuple(e: Union[Any, Tuple[Any]]) -> Tuple[Any]:
