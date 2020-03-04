@@ -212,6 +212,10 @@ class ScoreHolder:
             for k, v in self.dic.items()
         })
 
+    def for_all_values(self) -> Iterator:
+        for v in self.dic.values():
+            for x in v:
+                yield x
 
 # TODO remove ? usefull ?
 class Growth(Enum):

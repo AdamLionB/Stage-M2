@@ -122,8 +122,9 @@ def non_identity_test(gold: Partition, sys: Partition) -> Optional[ScoreHolder]:
     evaluates whether score(gold, sys) != 1 with gold != sys
     """
 
-    def intern(x: float) -> EasyFail:
-        return EasyFail.has_passed_test(not isclose(x, 1))
+    def intern(x: float) -> bool:
+        return not isclose(x, 1)
+        #return EasyFail.has_passed_test(not isclose(x, 1))
 
     if gold == sys:
         return None
@@ -177,6 +178,29 @@ def randomized_test(
         if res is not None:
             yield res
 
+def _randomized_test(
+        test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
+        partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
+        repetitions: int = 100,
+        beta_param: Tuple[float, float] = (1, 1)
+) -> Iterator[ScoreHolder]:
+    """
+    Apply the given test function to partitions randomly generated with partition_generators
+    """
+    n_args = len(signature(test_func).parameters)
+    m = list(range(100))
+    # repeats the test 'repetitions' times
+    for _ in range(repetitions):
+        # if no partition_generator is given partition will follow a beta partition
+        if partition_generators is None:
+            a = (beta_partition(*beta_param, m) for _ in range(n_args))
+        else:
+            if len(partition_generators) != n_args:
+                raise Exception(f'got {len(partition_generators)} partition generator, expected {n_args}')
+            a = (part(m) for part in partition_generators)
+        res = test_func(*a)
+        if res is not None:
+            yield a, res
 
 def fixed_gold_randomized_test(
         test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
@@ -222,7 +246,7 @@ def all_partitions_test(
     for args in product(all_partition_of_size(i), repeat=n_args):
         res = test_func(*args)
         if res is not None:
-            yield res
+            yield args, res
 
 T = TypeVar('T')
 U = TypeVar('U')
@@ -258,10 +282,13 @@ class tmp_class:
         self.acc2= acc2
 
     def tmp_a(self):
-        for dists in product(tmp_class.distributions, repeat=self.n_args):
-            yield dists, self.agg(
-                randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions)
-            )
+        for i in range(self.start, self.end):
+            yield i, self.agg(all_partitions_test(self.test_func, i=i))
+        #
+        # for dists in product(tmp_class.distributions, repeat=self.n_args):
+        #     yield dists, self.agg(
+        #         _randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions)
+        #     )
 
     @staticmethod
     def avg_tuples(score_holderss: Iterator[Tuple[ScoreHolder, ...]]) -> Tuple[ScoreHolder, ...]:
@@ -377,14 +404,36 @@ def _a(
         res = acc1(res, scores)
     return acc2(res)
 
-_b = partial(_a, lambda x: (x,), lambda x, y: (x[0]+y,), lambda x: x[0])
-_c = partial(_a, lambda x: (x[1],), lambda x, y: (x[0]+y[1],), lambda x: x[0])
+def identity(x):
+    return x
+
+def first(x):
+    return x[0]
+
+def second(x):
+    return x[1]
+
+def blop(x: Tuple[Any, ScoreHolder]):
+    if not reduce(lambda x, y: x & y, x[1].for_all_values()):
+        return [x[0]], x[1]
+    else :
+        return [], x[1]
+
+
+
+from functools import reduce
 def blup(x, y):
-    res = x + y
-    if x.value and not res.value:
-        y, res
-    return 
-_d = partial(_a, lambda x: (x,), blup, lambda x: x[0]),
+    res = ScoreHolder.apply(x[1], lambda a, b: a & b, y[1])
+
+    #res = x[1] & y[1]
+    # TODO correct that
+    if reduce(lambda x, y: x | y,ScoreHolder.apply(x[1],lambda a, b: ((not b) and a), res).for_all_values()):
+        return x[0]+[y[0]], res
+    return x[0], res
+_b = partial(_a, to_tuple, lambda x, y: (x[0]+y,), first)
+_c = partial(_a, lambda x: to_tuple(second(x)), lambda x, y: (x[0]+y[1],), first)
+_d = partial(_a, blop, blup, identity)
+#_e = partial(_a, lambda x: to_tuple(second(x)), lambda x, y: (x[0]+y[1],), first)
 #_c = partial(_a, lambda x, y : (x, y), lambda x, y: (x[0], x[1]+y), lambda x, y: (x, y))
 
 
@@ -396,20 +445,20 @@ ALL_TESTS = {
     # b2_test: tmp_class(b2_test, 'b2', repetitions=1),
     # d1_test: tmp_class(d1_test, 'd1', repetitions=1),
     # d2_test: tmp_class(d2_test, 'd2', repetitions=1),
-    identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100, agg= _b),
-    # non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2),
+    # identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100),
+    non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2, end=4, agg=_d),
     # f_test: tmp_class(f_test, 'f', repetitions=100),
     # triangle_test: tmp_class(triangle_test, 'g | triangle', repetitions=100),
     # symetry_test: tmp_class(symetry_test, 'h | symetry', repetitions=100),
     # singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100),
     # entity_test: tmp_class(entity_test, 'entity', repetitions=100),
 }
-for i in ALL_TESTS[identity_test].tmp_a():
+for i in ALL_TESTS[non_identity_test].tmp_a():
     print(i)
 
-print(_c(
-    ALL_TESTS[identity_test].tmp_a()
-))
+# print(_c(
+#     ALL_TESTS[identity_test].tmp_a()
+# ))
 
 # TODO generalise for any json format
 # TODO generalise for any format ? (with a given read method)
