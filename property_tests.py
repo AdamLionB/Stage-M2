@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 # std lib
-from typing import Callable, Tuple, Union, Iterator, Optional, Any, TypeVar
+from typing import Callable, Tuple, Union, Iterator, Optional, Any, TypeVar, List
 from inspect import signature
 from os import listdir
 from itertools import product
 from math import isclose
-from functools import partial
+from functools import partial, reduce
 
 # scorch lib
 from scorch.main import clusters_from_json
@@ -18,8 +18,8 @@ from utils import ScoreHolder, evaluates, EasyFail, HardFail, to_tuple
 
 
 def a1_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> EasyFail:
-        return EasyFail.has_passed_test(not isclose(x, y) and x > y)
+    def intern(x: float, y: float) -> bool:
+        return not isclose(x, y) and x > y
 
     gold = [{1, 2}, {3}, {4}]
     sys = [{1, 2}, {3, 4}]
@@ -27,8 +27,8 @@ def a1_test() -> ScoreHolder:
 
 
 def a2_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> EasyFail:
-        return EasyFail.has_passed_test(not isclose(x, y) and x > y)
+    def intern(x: float, y: float) -> bool:
+        return not isclose(x, y) and x > y
 
     gold = [{3}, {4}]
     sys = [{3, 4}]
@@ -36,8 +36,8 @@ def a2_test() -> ScoreHolder:
 
 
 def a3_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> EasyFail:
-        return EasyFail.has_passed_test(not isclose(x, y) and x > y)
+    def intern(x: float, y: float) -> bool:
+        return not isclose(x, y) and x > y
 
     gold = [{1, 2}, {3}]
     sys = [{1, 2, 3}]
@@ -45,8 +45,8 @@ def a3_test() -> ScoreHolder:
 
 
 def b1_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> EasyFail:
-        return EasyFail.has_passed_test(not isclose(x, y) and x < y)
+    def intern(x: float, y: float) -> bool:
+        return not isclose(x, y) and x < y
 
     gold = [{1, 2}, {3, 4, 5}]
     sys1 = [{1, 2, 3}, {4, 5}]
@@ -55,8 +55,8 @@ def b1_test() -> ScoreHolder:
 
 
 def b2_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> EasyFail:
-        return EasyFail.has_passed_test(not isclose(x, y) and x < y)
+    def intern(x: float, y: float) -> bool:
+        return not isclose(x, y) and x < y
 
     gold = [{1, 2, 3, 4, 5}, {6, 7}]
     sys1 = [{1, 2, 3, 4}, {5, 6, 7}]
@@ -65,8 +65,8 @@ def b2_test() -> ScoreHolder:
 
 
 def d1_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> EasyFail:
-        return EasyFail.has_passed_test(isclose(x, y))
+    def intern(x: float, y: float) -> bool:
+        return isclose(x, y)
 
     gold1 = [{1, 2}, {3, 4}, {5, 6}]
     sys1 = [{1, 3}, {2, 4}, {5, 6}]
@@ -76,8 +76,8 @@ def d1_test() -> ScoreHolder:
 
 
 def d2_test() -> ScoreHolder:
-    def intern(x: float, y: float) -> EasyFail:
-        return EasyFail.has_passed_test(isclose(x, y))
+    def intern(x: float, y: float) -> bool:
+        return isclose(x, y)
 
     gold = [{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13}, {14, 15, 16}]
     sys1 = [{1, 2, 3, 4, 6}, {5, 7, 8, 9, 10}, {11, 12, 13}, {14, 15, 16}]
@@ -86,8 +86,8 @@ def d2_test() -> ScoreHolder:
 
 
 def f_test(gold: Partition, sys: Partition) -> ScoreHolder:
-    def intern(x: float) -> HardFail:
-        return HardFail.has_passed_test(isclose(x, 0))
+    def intern(x: float) -> bool:
+        return isclose(x, 0)
 
     return ScoreHolder.apply_to_values(evaluates(gold, sys), intern)
 
@@ -97,8 +97,8 @@ def symetry_test(gold: Partition, sys: Partition) -> ScoreHolder:
     evaluates whether score(gold, sys) = score(sys, gold)
     """
 
-    def intern(x: float, y: float) -> EasyFail:
-        return EasyFail.has_passed_test(isclose(x, y))
+    def intern(x: float, y: float) -> bool:
+        return isclose(x, y)
 
     return ScoreHolder.apply(evaluates(gold, sys), intern, evaluates(sys, gold))
 
@@ -136,8 +136,8 @@ def identity_test(gold: Partition) -> ScoreHolder:
     evaluates whether score(gold, gold) = 1
     """
 
-    def intern(x: float) -> EasyFail:
-        return EasyFail.has_passed_test(isclose(x, 1))
+    def intern(x: float) -> bool:
+        return isclose(x, 1)
 
     return evaluates(gold, gold).apply_to_values(intern)
 
@@ -148,8 +148,8 @@ def triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
     s(a,b) + s(b,c) <= s(b,b) + s(a,b)
     """
 
-    def intern(x: float, y: float) -> EasyFail:
-        return EasyFail.has_passed_test(isclose(x, y) or x < y)
+    def intern(x: float, y: float) -> bool:
+        return isclose(x, y) or x < y
 
     return ScoreHolder.apply(evaluates(a, b) + evaluates(b, c), intern, evaluates(b, b) + evaluates(a, c))
 
@@ -392,69 +392,83 @@ class tmp_class:
     def h(self):
         map(to_tuple, self.intern1())
 
-#X = TypeVar('X', bound=...)
-def _a(
+def acc(
         init_func: Callable[[T], Tuple[U]],
         acc1: Callable[[Tuple[U], T], Tuple[U]],
-        acc2: Callable[[Tuple[U]], Any],
+        acc2: Callable[[Tuple[U]], V],
         scoress: Iterator[T]
-):
+) -> V:
     res = init_func(next(scoress))
     for scores in scoress:
         res = acc1(res, scores)
     return acc2(res)
 
-def identity(x):
+
+def identity(x: T) -> T:
     return x
 
-def first(x):
+
+def first(x: Tuple[T, ...]) -> T:
     return x[0]
 
-def second(x):
+
+def second(x: Tuple[..., T, ...]) -> T:
     return x[1]
 
-def blop(x: Tuple[Any, ScoreHolder]):
+#TODO rename
+def blop(x: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
     if not reduce(lambda x, y: x & y, x[1].for_all_values()):
         return [x[0]], x[1]
     else :
         return [], x[1]
 
 
-
-from functools import reduce
-def blup(x, y):
+def list_or_acc(x: Tuple[List, ScoreHolder], y: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
     res = ScoreHolder.apply(x[1], lambda a, b: a & b, y[1])
-
-    #res = x[1] & y[1]
-    # TODO correct that
     if reduce(lambda x, y: x | y,ScoreHolder.apply(x[1],lambda a, b: ((not b) and a), res).for_all_values()):
         return x[0]+[y[0]], res
     return x[0], res
-_b = partial(_a, to_tuple, lambda x, y: (x[0]+y,), first)
-_c = partial(_a, lambda x: to_tuple(second(x)), lambda x, y: (x[0]+y[1],), first)
-_d = partial(_a, blop, blup, identity)
+
+
+
+# _b = partial(acc, to_tuple, lambda x, y: (x[0] + y,), first)
+
+# Tuple[..., T, ...] -> T -> Tuple[T] -> T
+simple_and_acc = partial(acc, second, lambda x, y: ScoreHolder.apply(x, lambda a, b : a & b ,second(y)), identity)
+#simple_and_acc_acc = partial(acc, lambda x: x[1], lambda x, y :)
+
+# Tuple[..., ScoreHolder] -> Tuple[List, ScoreHolder]
+track_acc = partial(acc, blop, list_or_acc, identity)
+track_acc_acc = partial(
+    acc,
+    lambda x: ([x[0], x[1][0]], x[1][1]),
+    lambda x, y: (x[0]+[(y[0], y[1][0])], ScoreHolder.apply(x[1], lambda a, b : a & b, y[1][1])),
+    identity
+)
 #_e = partial(_a, lambda x: to_tuple(second(x)), lambda x, y: (x[0]+y[1],), first)
 #_c = partial(_a, lambda x, y : (x, y), lambda x, y: (x[0], x[1]+y), lambda x, y: (x, y))
 
 
 ALL_TESTS = {
-    # a1_test: tmp_class(a1_test, 'a1', repetitions=1, init_func1= lambda x: (x,), acc1=lambda x, y : (x[0]+y,), acc2=lambda x: x),
-    #a2_test: tmp_class(a2_test, 'a2', repetitions=1, agg = _b),
-    # a3_test: tmp_class(a3_test, 'a3', repetitions=1),
-    # b1_test: tmp_class(b1_test, 'b1', repetitions=1),
-    # b2_test: tmp_class(b2_test, 'b2', repetitions=1),
-    # d1_test: tmp_class(d1_test, 'd1', repetitions=1),
-    # d2_test: tmp_class(d2_test, 'd2', repetitions=1),
-    # identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100),
-    non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2, end=4, agg=_d),
+    # a1_test: tmp_class(a1_test, 'a1', repetitions=1, init_func1= lambda x: (x,), agg=simple_and_acc),
+    # a2_test: tmp_class(a2_test, 'a2', repetitions=1, agg= simple_and_acc),
+    # a3_test: tmp_class(a3_test, 'a3', repetitions=1, agg= simple_and_acc),
+    # b1_test: tmp_class(b1_test, 'b1', repetitions=1, agg= simple_and_acc),
+    # b2_test: tmp_class(b2_test, 'b2', repetitions=1, agg= simple_and_acc),
+    # d1_test: tmp_class(d1_test, 'd1', repetitions=1, agg= simple_and_acc),
+    # d2_test: tmp_class(d2_test, 'd2', repetitions=1, agg= simple_and_acc),
+    identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100, agg= track_acc),
+    non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2, end=4, agg=track_acc),
     # f_test: tmp_class(f_test, 'f', repetitions=100),
     # triangle_test: tmp_class(triangle_test, 'g | triangle', repetitions=100),
     # symetry_test: tmp_class(symetry_test, 'h | symetry', repetitions=100),
     # singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100),
     # entity_test: tmp_class(entity_test, 'entity', repetitions=100),
 }
-for i in ALL_TESTS[non_identity_test].tmp_a():
-    print(i)
+for k, v in ALL_TESTS.items():
+    print(track_acc_acc(v.tmp_a()))
+    # for i in v.tmp_a():
+    #     print(i)
 
 # print(_c(
 #     ALL_TESTS[identity_test].tmp_a()

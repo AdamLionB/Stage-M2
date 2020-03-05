@@ -1,7 +1,7 @@
 import math
 from functools import partial, reduce
 import numpy as np
-from typing import Iterator
+from typing import Iterator, Tuple, TypeVar
 from partition_utils import Partition
 
 # def f(n,r):
@@ -37,6 +37,12 @@ def timed(func, *args):
 	print(time() - start)
 	return res
 
+
+T = TypeVar('T')
+
+
+def first(x: Tuple[str, int]) -> str:
+	return x[1]
 
 
 
