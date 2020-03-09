@@ -154,30 +154,6 @@ def triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
     return ScoreHolder.apply(evaluates(a, b) + evaluates(b, c), intern, evaluates(b, b) + evaluates(a, c))
 
 
-def randomized_test(
-        test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
-        partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
-        repetitions: int = 100,
-        beta_param: Tuple[float, float] = (1, 1)
-) -> Iterator[ScoreHolder]:
-    """
-    Apply the given test function to partitions randomly generated with partition_generators
-    """
-    n_args = len(signature(test_func).parameters)
-    m = list(range(100))
-    # repeats the test 'repetitions' times
-    for _ in range(repetitions):
-        # if no partition_generator is given partition will follow a beta partition
-        if partition_generators is None:
-            a = (beta_partition(*beta_param, m) for _ in range(n_args))
-        else:
-            if len(partition_generators) != n_args:
-                raise Exception(f'got {len(partition_generators)} partition generator, expected {n_args}')
-            a = (part(m) for part in partition_generators)
-        res = test_func(*a)
-        if res is not None:
-            yield res
-
 def _randomized_test(
         test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
         partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
@@ -200,7 +176,31 @@ def _randomized_test(
             a = (part(m) for part in partition_generators)
         res = test_func(*a)
         if res is not None:
-            yield a, res
+            yield res
+
+def randomized_test(
+        test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
+        partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
+        repetitions: int = 100,
+        beta_param: Tuple[float, float] = (1, 1)
+) -> Iterator[List[Partition], ScoreHolder]:
+    """
+    Apply the given test function to partitions randomly generated with partition_generators
+    """
+    n_args = len(signature(test_func).parameters)
+    m = list(range(100))
+    # repeats the test 'repetitions' times
+    for _ in range(repetitions):
+        # if no partition_generator is given partition will follow a beta partition
+        if partition_generators is None:
+            partitions = [beta_partition(*beta_param, m) for _ in range(n_args)]
+        else:
+            if len(partition_generators) != n_args:
+                raise Exception(f'got {len(partition_generators)} partition generator, expected {n_args}')
+            partitions = [part(m) for part in partition_generators]
+        res = test_func(*partitions)
+        if res is not None:
+            yield partitions, res
 
 def fixed_gold_randomized_test(
         test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
@@ -217,14 +217,14 @@ def fixed_gold_randomized_test(
         for _ in range(repetitions):
             # if no partition_generator is given partition will follow a beta partition
             if partition_generators is None:
-                a = (beta_partition(*beta_param, m) for _ in range(n_agrs))
+                partitions = [beta_partition(*beta_param, m) for _ in range(n_agrs)]
             else:
                 if len(partition_generators) != n_agrs:
                     raise Exception(f'got {len(partition_generators)} partition generator, expected {n_agrs}')
-                a = (part(m) for part in partition_generators)
-        res = test_func(gold, *a)
+                partitions = [part(m) for part in partition_generators]
+        res = test_func(gold, *partitions)
         if res is not None:
-            yield res
+            yield partitions, res
 
 
 def ancor_gold_randomized_test(
@@ -243,16 +243,16 @@ def all_partitions_test(
         i: int = 1
 ) -> Iterator[ScoreHolder]:
     n_args = len(signature(test_func).parameters)
-    for args in product(all_partition_of_size(i), repeat=n_args):
-        res = test_func(*args)
+    for partitions in product(all_partition_of_size(i), repeat=n_args):
+        res = test_func(*partitions)
         if res is not None:
-            yield args, res
+            yield partitions, res
 
 T = TypeVar('T')
 U = TypeVar('U')
 V = TypeVar('V')
 class tmp_class:
-    distributions = [partial(beta_partition, a=1, b=1), partial(beta_partition, a=1, b=100)]
+    distributions = [partial(beta_partition, a=1, b=1)]#, partial(beta_partition, a=1, b=100)]
 
     def __init__(
             self,
@@ -264,9 +264,7 @@ class tmp_class:
             start: int = 1,
             end: int = 5,
             agg= None,
-            init_func1: Callable[[ScoreHolder], T] = lambda x: (1, x),
-            acc1: Callable[[T, T], U] = lambda x, y: (x[0]+1, x[1] + y),
-            acc2: Callable[[U], Any]= lambda x, y: y / x
+            agg2 = None
     ):
         self.test_func = test_func
         self.n_args = len(signature(self.test_func).parameters)
@@ -277,9 +275,7 @@ class tmp_class:
         self.start = start
         self.end = end
         self.agg = agg
-        self.acc1= acc1
-        self.init_func = init_func1
-        self.acc2= acc2
+        self.agg2 = agg2
 
     def tmp_a(self):
         for i in range(self.start, self.end):
@@ -289,6 +285,7 @@ class tmp_class:
         #     yield dists, self.agg(
         #         _randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions)
         #     )
+
 
     @staticmethod
     def avg_tuples(score_holderss: Iterator[Tuple[ScoreHolder, ...]]) -> Tuple[ScoreHolder, ...]:
@@ -344,38 +341,30 @@ class tmp_class:
         else:
             return tmp_class.average(it)
 
-    def intern1(self, verbose: bool =False) -> Iterator[ScoreHolder]:
+    def intern1(self) -> Iterator[Tuple[int, ScoreHolder]]:
         for i in range(self.start, self.end):
-            if verbose:
-                print(i)
-            yield self.agreg(all_partitions_test(self.test_func, i=i))
+            yield i, self.agg(all_partitions_test(self.test_func, i=i))
 
-    def intern2(self, verbose: bool = False) -> Iterator[ScoreHolder]:
+    def intern2(self) -> Iterator[Tuple[Tuple[Partition, ...], ScoreHolder]]:
         for dists in product(tmp_class.distributions, repeat=self.n_args):
-            if verbose:
-                print(dists)
-            yield self.agreg(randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions))
+            yield dists, self.agg(randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions))
 
-    def intern21(self, verbose: bool = False) -> Iterator[ScoreHolder]:
-        for dists in product(tmp_class.distributions, repeat=self.n_args):
-            yield dists, self.agreg(randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions))
-
-    def intern3(self, verbose: bool = False) -> Iterator[ScoreHolder]:
+    def intern3(self) -> Iterator[Tuple[Tuple[Partition, ...], ScoreHolder]]:
         for dists in product(tmp_class.distributions, repeat=self.n_args-1):
-            if verbose:
-                print(dists)
-            yield self.agreg(ancor_gold_randomized_test(
-                self.test_func,
-                partition_generators=dists,
-                repetitions=self.repetitions if self.n_args != 1 else 1
-            ))
+            yield dists, self.agg(
+                ancor_gold_randomized_test(
+                    self.test_func,
+                    partition_generators=dists,
+                    repetitions=self.repetitions if self.n_args != 1 else 1
+                )
+            )
 
     def f(self):
         if self.n_args != 0:
-            yield tmp_class.avg_tuples(map(to_tuple, self.intern1()))
+            yield self.agg2(self.intern1())
             if self.on_corpus:
-                yield tmp_class.avg_tuples(map(to_tuple, self.intern3()))
-        yield tmp_class.avg_tuples(map(to_tuple, self.intern2()))
+                yield self.agg2(self.intern3())
+        yield self.agg2(self.intern2())
 
     def g(self):
         print(self.descr_str)
@@ -417,7 +406,7 @@ def second(x: Tuple[..., T, ...]) -> T:
 
 #TODO rename
 def blop(x: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
-    if not reduce(lambda x, y: x & y, x[1].for_all_values()):
+    if not reduce(lambda a, b: a & b, x[1].for_all_values(), True):
         return [x[0]], x[1]
     else :
         return [], x[1]
@@ -433,11 +422,10 @@ def list_or_acc(x: Tuple[List, ScoreHolder], y: Tuple[Any, ScoreHolder]) -> Tupl
 
 # _b = partial(acc, to_tuple, lambda x, y: (x[0] + y,), first)
 
-# Tuple[..., T, ...] -> T -> Tuple[T] -> T
+
 simple_and_acc = partial(acc, second, lambda x, y: ScoreHolder.apply(x, lambda a, b : a & b ,second(y)), identity)
 #simple_and_acc_acc = partial(acc, lambda x: x[1], lambda x, y :)
 
-# Tuple[..., ScoreHolder] -> Tuple[List, ScoreHolder]
 track_acc = partial(acc, blop, list_or_acc, identity)
 track_acc_acc = partial(
     acc,
@@ -457,16 +445,17 @@ ALL_TESTS = {
     # b2_test: tmp_class(b2_test, 'b2', repetitions=1, agg= simple_and_acc),
     # d1_test: tmp_class(d1_test, 'd1', repetitions=1, agg= simple_and_acc),
     # d2_test: tmp_class(d2_test, 'd2', repetitions=1, agg= simple_and_acc),
-    identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100, agg= track_acc),
-    non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2, end=4, agg=track_acc),
+    identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100, agg=track_acc, agg2=track_acc_acc),
+    non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2, end=4, agg=track_acc, agg2=track_acc_acc),
     # f_test: tmp_class(f_test, 'f', repetitions=100),
-    # triangle_test: tmp_class(triangle_test, 'g | triangle', repetitions=100),
-    # symetry_test: tmp_class(symetry_test, 'h | symetry', repetitions=100),
+    triangle_test: tmp_class(triangle_test, 'g | triangle', repetitions=100, agg=track_acc, agg2=track_acc_acc),
+    symetry_test: tmp_class(symetry_test, 'h | symetry', repetitions=100, agg=track_acc, agg2=track_acc_acc),
     # singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100),
     # entity_test: tmp_class(entity_test, 'entity', repetitions=100),
 }
 for k, v in ALL_TESTS.items():
-    print(track_acc_acc(v.tmp_a()))
+    v.g2()
+    #print(track_acc_acc(v.tmp_a()))
     # for i in v.tmp_a():
     #     print(i)
 
