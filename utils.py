@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 # std libs
-from typing import Tuple, Dict, Iterator, Union, Any, Callable
+from typing import Tuple, Dict, Iterator, Union, Any, Callable, TypeVar, List
 from enum import Enum, auto
 from math import isclose
 from time import time
+from functools import reduce, partial
 from itertools import zip_longest
 
 # other libs
@@ -17,6 +18,10 @@ from scorch.scores import conll2012
 # this lib
 from partition_utils import partition_to_sklearn_format, Partition
 from scorer import lea, edit
+
+T = TypeVar('T')
+U = TypeVar('U')
+V = TypeVar('V')
 
 
 class Timer:
@@ -371,3 +376,74 @@ def evaluates(gold: Partition, sys: Partition) -> ScoreHolder:
         for name, metric in SK_METRICS.items():
             res[name] = to_tuple(metric(gold, sys))
     return ScoreHolder(res)
+
+
+def identity(x: T) -> T:
+    return x
+
+
+def first(x: Tuple[T, ...]) -> T:
+    return x[0]
+
+
+def second(x: Tuple[Any, T, ...]) -> T:
+    return x[1]
+
+def acc(
+        init_func: Callable[[T], Tuple[U]],
+        acc1: Callable[[Tuple[U], T], Tuple[U]],
+        acc2: Callable[[Tuple[U]], V],
+        scoress: Iterator[T]
+) -> V:
+    res = init_func(next(scoress))
+    for scores in scoress:
+        res = acc1(res, scores)
+    return acc2(res)
+
+
+def list_and_second(x: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
+    if not reduce(lambda a, b: a & b, x[1].for_all_values(), True):
+        return [x[0]], x[1]
+    else :
+        return [], x[1]
+
+
+def list_or_second(x: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
+    if reduce(lambda a, b: a | b, x[1].for_all_values(), True):
+        return [x[0]], x[1]
+    else :
+        return [], x[1]
+
+
+def list_and(x: Tuple[List, ScoreHolder], y: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
+    res = ScoreHolder.apply(x[1], lambda a, b: a & b, y[1])
+    if reduce(lambda x, y: x | y,ScoreHolder.apply(x[1],lambda a, b: ((not b) and a), res).for_all_values()):
+        return x[0]+[y[0]], res
+    return x[0], res
+
+def list_or(x: Tuple[List, ScoreHolder], y: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
+    res = ScoreHolder.apply(x[1], lambda a, b: a | b, y[1])
+    if reduce(lambda x, y: x | y,ScoreHolder.apply(x[1],lambda a, b: ((not a) and b), res).for_all_values()):
+        return x[0]+[y[0]], res
+    return x[0], res
+
+simple_and_acc = partial(acc, second, lambda x, y: ScoreHolder.apply(x, lambda a, b : a & b ,second(y)), identity)
+simple_or_acc = partial(acc, second, lambda x, y: ScoreHolder.apply(x, lambda a, b : a | b ,second(y)), identity)
+
+list_and_acc = partial(acc, list_and_second, list_and, identity)
+list_or_acc = partial(acc, list_or_second, list_or, identity)
+
+
+list_and_acc_acc = partial(
+    acc,
+    lambda x: ([x[0], x[1][0]], x[1][1]),
+    lambda x, y: (x[0]+[(y[0], y[1][0])], ScoreHolder.apply(x[1], lambda a, b : a & b, y[1][1])),
+    identity
+)
+
+list_or_acc_acc = partial(
+    acc,
+    lambda x: ([x[0], x[1][0]], x[1][1]),
+    lambda x, y: (x[0]+[(y[0], y[1][0])], ScoreHolder.apply(x[1], lambda a, b : a | b, y[1][1])),
+    identity
+)

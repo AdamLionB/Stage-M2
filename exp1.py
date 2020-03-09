@@ -8,4 +8,4 @@ from itertools import product
 x = [singleton_test, entity_test, identity_test, symetry_test, triangle_test]
 for k, v in ALL_TESTS.items():
     if k in x:
-        v.g()
+        v.g2()

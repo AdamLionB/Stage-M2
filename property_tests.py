@@ -14,7 +14,8 @@ from scorch.main import clusters_from_json
 # this lib
 from partition_utils import Partition, singleton_partition, entity_partition, beta_partition, get_mentions, \
     all_partition_of_size
-from utils import ScoreHolder, evaluates, EasyFail, HardFail, to_tuple
+from utils import ScoreHolder, evaluates, to_tuple, simple_and_acc, simple_or_acc,\
+    list_and_acc, list_and_acc_acc, list_or_acc, list_or_acc_acc
 
 
 def a1_test() -> ScoreHolder:
@@ -277,16 +278,6 @@ class tmp_class:
         self.agg = agg
         self.agg2 = agg2
 
-    def tmp_a(self):
-        for i in range(self.start, self.end):
-            yield i, self.agg(all_partitions_test(self.test_func, i=i))
-        #
-        # for dists in product(tmp_class.distributions, repeat=self.n_args):
-        #     yield dists, self.agg(
-        #         _randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions)
-        #     )
-
-
     @staticmethod
     def avg_tuples(score_holderss: Iterator[Tuple[ScoreHolder, ...]]) -> Tuple[ScoreHolder, ...]:
         """
@@ -335,12 +326,6 @@ class tmp_class:
         return (regular_sum / count,
                 ((squared_sum - (regular_sum ** 2) / count) / count) ** (1 / 2))
 
-    def agreg(self, it: Iterator[ScoreHolder]) -> Iterator[ScoreHolder]:
-        if self.std:
-            return tmp_class.avg_std(it)
-        else:
-            return tmp_class.average(it)
-
     def intern1(self) -> Iterator[Tuple[int, ScoreHolder]]:
         for i in range(self.start, self.end):
             yield i, self.agg(all_partitions_test(self.test_func, i=i))
@@ -381,87 +366,26 @@ class tmp_class:
     def h(self):
         map(to_tuple, self.intern1())
 
-def acc(
-        init_func: Callable[[T], Tuple[U]],
-        acc1: Callable[[Tuple[U], T], Tuple[U]],
-        acc2: Callable[[Tuple[U]], V],
-        scoress: Iterator[T]
-) -> V:
-    res = init_func(next(scoress))
-    for scores in scoress:
-        res = acc1(res, scores)
-    return acc2(res)
 
-
-def identity(x: T) -> T:
-    return x
-
-
-def first(x: Tuple[T, ...]) -> T:
-    return x[0]
-
-
-def second(x: Tuple[..., T, ...]) -> T:
-    return x[1]
-
-#TODO rename
-def blop(x: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
-    if not reduce(lambda a, b: a & b, x[1].for_all_values(), True):
-        return [x[0]], x[1]
-    else :
-        return [], x[1]
-
-
-def list_or_acc(x: Tuple[List, ScoreHolder], y: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
-    res = ScoreHolder.apply(x[1], lambda a, b: a & b, y[1])
-    if reduce(lambda x, y: x | y,ScoreHolder.apply(x[1],lambda a, b: ((not b) and a), res).for_all_values()):
-        return x[0]+[y[0]], res
-    return x[0], res
-
-
-
-# _b = partial(acc, to_tuple, lambda x, y: (x[0] + y,), first)
-
-
-simple_and_acc = partial(acc, second, lambda x, y: ScoreHolder.apply(x, lambda a, b : a & b ,second(y)), identity)
-#simple_and_acc_acc = partial(acc, lambda x: x[1], lambda x, y :)
-
-track_acc = partial(acc, blop, list_or_acc, identity)
-track_acc_acc = partial(
-    acc,
-    lambda x: ([x[0], x[1][0]], x[1][1]),
-    lambda x, y: (x[0]+[(y[0], y[1][0])], ScoreHolder.apply(x[1], lambda a, b : a & b, y[1][1])),
-    identity
-)
-#_e = partial(_a, lambda x: to_tuple(second(x)), lambda x, y: (x[0]+y[1],), first)
-#_c = partial(_a, lambda x, y : (x, y), lambda x, y: (x[0], x[1]+y), lambda x, y: (x, y))
 
 
 ALL_TESTS = {
-    # a1_test: tmp_class(a1_test, 'a1', repetitions=1, init_func1= lambda x: (x,), agg=simple_and_acc),
-    # a2_test: tmp_class(a2_test, 'a2', repetitions=1, agg= simple_and_acc),
-    # a3_test: tmp_class(a3_test, 'a3', repetitions=1, agg= simple_and_acc),
-    # b1_test: tmp_class(b1_test, 'b1', repetitions=1, agg= simple_and_acc),
-    # b2_test: tmp_class(b2_test, 'b2', repetitions=1, agg= simple_and_acc),
-    # d1_test: tmp_class(d1_test, 'd1', repetitions=1, agg= simple_and_acc),
-    # d2_test: tmp_class(d2_test, 'd2', repetitions=1, agg= simple_and_acc),
-    identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100, agg=track_acc, agg2=track_acc_acc),
-    non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2, end=4, agg=track_acc, agg2=track_acc_acc),
-    # f_test: tmp_class(f_test, 'f', repetitions=100),
-    triangle_test: tmp_class(triangle_test, 'g | triangle', repetitions=100, agg=track_acc, agg2=track_acc_acc),
-    symetry_test: tmp_class(symetry_test, 'h | symetry', repetitions=100, agg=track_acc, agg2=track_acc_acc),
-    # singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100),
-    # entity_test: tmp_class(entity_test, 'entity', repetitions=100),
+    a1_test: tmp_class(a1_test, 'a1', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
+    a2_test: tmp_class(a2_test, 'a2', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
+    a3_test: tmp_class(a3_test, 'a3', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
+    b1_test: tmp_class(b1_test, 'b1', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
+    b2_test: tmp_class(b2_test, 'b2', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
+    d1_test: tmp_class(d1_test, 'd1', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
+    d2_test: tmp_class(d2_test, 'd2', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
+    identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),# agg=list_and_acc, agg2=list_and_acc_acc)
+    non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2, end=4, agg= simple_and_acc, agg2=simple_and_acc),
+    f_test: tmp_class(f_test, 'f', repetitions=100, agg=simple_or_acc, agg2=simple_or_acc),
+    triangle_test: tmp_class(triangle_test, 'g | triangle', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),
+    symetry_test: tmp_class(symetry_test, 'h | symetry', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),
+    singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),
+    entity_test: tmp_class(entity_test, 'entity', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),
 }
-for k, v in ALL_TESTS.items():
-    v.g2()
-    #print(track_acc_acc(v.tmp_a()))
-    # for i in v.tmp_a():
-    #     print(i)
 
-# print(_c(
-#     ALL_TESTS[identity_test].tmp_a()
-# ))
 
 # TODO generalise for any json format
 # TODO generalise for any format ? (with a given read method)
