@@ -17,7 +17,7 @@ distributions = [partial(beta_partition, a=1, b=1), partial(beta_partition, a=1,
 x = [symetry_test, identity_test, triangle_test, non_identity_test]
 for k, v in ALL_TESTS.items():
     if k in x:
-        v.g()
+        v.g2()
 
 # print(ScoreHolder.average(f(identity_test)))
 # print(ScoreHolder.average(f(non_identity_test, start=2)))
