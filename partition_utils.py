@@ -92,3 +92,15 @@ def all_partition_up_to_size(n: int) -> Iterator[Partition]:
                     for e, part, in enumerate(partition + [set()]):
                         yield n, partition[:e] + [part.union({n})] + partition[e + 1:]
     return (partition for _, partition in intern(n))
+
+def is_regular(partition: Partition):
+    return (not contains_one_entity(partition)) and (not is_dual(partition))
+
+def contains_singleton(partition: Partition):
+    return any((len(entity) == 1 for entity in partition))
+
+def contains_one_entity(partition: Partition):
+    return len(partition) == 1
+
+def is_dual(partition: Partition):
+    return all((len(entity) == 1 for entity in partition))

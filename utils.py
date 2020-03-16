@@ -211,7 +211,7 @@ class ScoreHolder:
             for (sk, sv), ov in zip(self.dic.items(), other.dic.values())
         })
 
-    def apply_to_values(self, func: Callable[[Any], Any]) -> ScoreHolder:
+    def apply_to_values(self, func: Callable[[T], U]) -> ScoreHolder:
         return ScoreHolder({
             k: tuple(func(x) for x in v)
             for k, v in self.dic.items()
@@ -221,6 +221,10 @@ class ScoreHolder:
         for v in self.dic.values():
             for x in v:
                 yield x
+
+    def for_important_values(self) -> Iterator:
+        for v in self.dic.values():
+            yield v[-1]
 
 # TODO remove ? usefull ?
 class Growth(Enum):
@@ -402,14 +406,14 @@ def acc(
 
 
 def list_and_second(x: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
-    if not reduce(lambda a, b: a & b, x[1].for_all_values(), True):
+    if not reduce(lambda a, b: a & b, x[1].for_important_values(), True):
         return [x[0]], x[1]
     else :
         return [], x[1]
 
 
 def list_or_second(x: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
-    if reduce(lambda a, b: a | b, x[1].for_all_values(), True):
+    if reduce(lambda a, b: a | b, x[1].for_important_values(), True):
         return [x[0]], x[1]
     else :
         return [], x[1]
@@ -417,13 +421,13 @@ def list_or_second(x: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
 
 def list_and(x: Tuple[List, ScoreHolder], y: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
     res = ScoreHolder.apply(x[1], lambda a, b: a & b, y[1])
-    if reduce(lambda x, y: x | y,ScoreHolder.apply(x[1],lambda a, b: ((not b) and a), res).for_all_values()):
+    if reduce(lambda x, y: x | y,ScoreHolder.apply(x[1],lambda a, b: ((not b) and a), res).for_important_values()):
         return x[0]+[y[0]], res
     return x[0], res
 
 def list_or(x: Tuple[List, ScoreHolder], y: Tuple[Any, ScoreHolder]) -> Tuple[List, ScoreHolder]:
     res = ScoreHolder.apply(x[1], lambda a, b: a | b, y[1])
-    if reduce(lambda x, y: x | y,ScoreHolder.apply(x[1],lambda a, b: ((not a) and b), res).for_all_values()):
+    if reduce(lambda x, y: x | y,ScoreHolder.apply(x[1],lambda a, b: ((not a) and b), res).for_important_values()):
         return x[0]+[y[0]], res
     return x[0], res
 

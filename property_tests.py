@@ -13,7 +13,7 @@ from scorch.main import clusters_from_json
 
 # this lib
 from partition_utils import Partition, singleton_partition, entity_partition, beta_partition, get_mentions, \
-    all_partition_of_size
+    all_partition_of_size, is_regular, contains_singleton
 from utils import ScoreHolder, evaluates, to_tuple, simple_and_acc, simple_or_acc,\
     list_and_acc, list_and_acc_acc, list_or_acc, list_or_acc_acc
 
@@ -93,15 +93,7 @@ def f_test(gold: Partition, sys: Partition) -> ScoreHolder:
     return ScoreHolder.apply_to_values(evaluates(gold, sys), intern)
 
 
-def symetry_test(gold: Partition, sys: Partition) -> ScoreHolder:
-    """
-    evaluates whether score(gold, sys) = score(sys, gold)
-    """
 
-    def intern(x: float, y: float) -> bool:
-        return isclose(x, y)
-
-    return ScoreHolder.apply(evaluates(gold, sys), intern, evaluates(sys, gold))
 
 
 def singleton_test(gold: Partition) -> ScoreHolder:
@@ -143,7 +135,32 @@ def identity_test(gold: Partition) -> ScoreHolder:
     return evaluates(gold, gold).apply_to_values(intern)
 
 
-def triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
+def metric_1_symetry_test(gold: Partition, sys: Partition) -> ScoreHolder:
+    """
+    evaluates whether score(gold, sys) = score(sys, gold)
+    """
+
+    def intern(x: float, y: float) -> bool:
+        return isclose(x, y)
+
+    return ScoreHolder.apply(evaluates(gold, sys), intern, evaluates(sys, gold))
+
+
+def metric_2_non_negativity_test(gold: Partition) -> ScoreHolder:
+    def intern(x: float) -> bool:
+        return isclose(x, 0) or x > 0
+
+    return evaluates(gold, gold).apply_to_values(intern)
+
+
+def metric_3(gold: Partition, sys: Partition) -> ScoreHolder:
+    def intern(x: float, y:float) -> bool:
+        return isclose(x, y) or x > y
+
+    return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
+
+
+def metric_4_triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
     """
     evaluates whether the (similarity) triangle inequality is respected
     s(a,b) + s(b,c) <= s(b,b) + s(a,b)
@@ -154,6 +171,54 @@ def triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
 
     return ScoreHolder.apply(evaluates(a, b) + evaluates(b, c), intern, evaluates(b, b) + evaluates(a, c))
 
+def metric_5_indiscernable(gold: Partition, sys: Partition) -> ScoreHolder:
+    def intern1(x: float, y: float):
+        return isclose(x, y)
+
+    def intern2(x: bool, y:bool):
+        return x & y
+
+    a = evaluates(gold, gold)
+    b = evaluates(sys, sys)
+    c = evaluates(gold, sys)
+
+    x = ScoreHolder.apply(a, intern1, b)
+    y = ScoreHolder.apply(a, intern1, c)
+    z = ScoreHolder.apply(b, intern1, c)
+
+    if gold == sys:
+        return ScoreHolder.apply(
+            ScoreHolder.apply(x, intern2, y),
+            intern2,
+            z
+        )
+    else:
+        return ScoreHolder.apply(
+            ScoreHolder.apply(x, intern2, y),
+            intern2,
+            z
+        ).apply_to_values(lambda k: not k)
+
+
+def metric_6(gold: Partition, sys: Partition) -> ScoreHolder:
+    def intern(x: float):
+        return isclose(x, 1) or x < 1
+
+    return evaluates(gold, sys).apply_to_values(intern)
+
+
+def metric_7(gold: Partition):
+    def intern(x: float):
+        return isclose(x, 1)
+
+    return evaluates(gold, gold).apply_to_values(intern)
+
+
+def metric_8(gold: Partition, sys: Partition):
+    def intern(x: float):
+        return isclose(x, 0) or x > 0
+
+    return evaluates(gold, sys).apply_to_values(intern)
 
 def _randomized_test(
         test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
@@ -241,10 +306,11 @@ def ancor_gold_randomized_test(
 
 def all_partitions_test(
         test_func: Callable[[Partition], Optional[ScoreHolder]],
-        i: int = 1
+        i: int = 1,
+        filtre_func: Callable[[Partition], bool] = lambda x : True
 ) -> Iterator[ScoreHolder]:
     n_args = len(signature(test_func).parameters)
-    for partitions in product(all_partition_of_size(i), repeat=n_args):
+    for partitions in product(filter(filtre_func,all_partition_of_size(i)), repeat=n_args):
         res = test_func(*partitions)
         if res is not None:
             yield partitions, res
@@ -263,7 +329,7 @@ class tmp_class:
             repetitions: int = 100,
             std: bool = False,
             start: int = 1,
-            end: int = 5,
+            end: int = 6,
             agg= None,
             agg2 = None
     ):
@@ -328,7 +394,10 @@ class tmp_class:
 
     def intern1(self) -> Iterator[Tuple[int, ScoreHolder]]:
         for i in range(self.start, self.end):
-            yield i, self.agg(all_partitions_test(self.test_func, i=i))
+            try :
+                yield i, self.agg(all_partitions_test(self.test_func, i=i))
+            except:
+                pass
 
     def intern2(self) -> Iterator[Tuple[Tuple[Partition, ...], ScoreHolder]]:
         for dists in product(tmp_class.distributions, repeat=self.n_args):
@@ -346,10 +415,13 @@ class tmp_class:
 
     def f(self):
         if self.n_args != 0:
-            yield self.agg2(self.intern1())
-            if self.on_corpus:
-                yield self.agg2(self.intern3())
-        yield self.agg2(self.intern2())
+            try :
+                yield self.agg2(self.intern1())
+            except StopIteration:
+                pass
+        #     if self.on_corpus:
+        #         yield self.agg2(self.intern3())
+        # yield self.agg2(self.intern2())
 
     def g(self):
         print(self.descr_str)
@@ -380,8 +452,14 @@ ALL_TESTS = {
     identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),# agg=list_and_acc, agg2=list_and_acc_acc)
     non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2, end=4, agg= simple_and_acc, agg2=simple_and_acc),
     f_test: tmp_class(f_test, 'f', repetitions=100, agg=simple_or_acc, agg2=simple_or_acc),
-    triangle_test: tmp_class(triangle_test, 'g | triangle', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),
-    symetry_test: tmp_class(symetry_test, 'h | symetry', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),
+    metric_1_symetry_test: tmp_class(metric_1_symetry_test, 'metrique 1', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc ),
+    metric_2_non_negativity_test: tmp_class(metric_2_non_negativity_test, 'metrique 2', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
+    metric_3: tmp_class(metric_3, 'metrique 3', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
+    metric_4_triangle_test: tmp_class(metric_4_triangle_test, 'metrique 4', end=5, repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
+    metric_5_indiscernable: tmp_class(metric_5_indiscernable, 'metrique 5', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
+    metric_6: tmp_class(metric_6, 'metrique 6', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
+    metric_7: tmp_class(metric_7, 'metrique 7', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
+    metric_8: tmp_class(metric_8, 'metrique 8', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
     singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),
     entity_test: tmp_class(entity_test, 'entity', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),
 }
