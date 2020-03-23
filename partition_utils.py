@@ -93,14 +93,30 @@ def all_partition_up_to_size(n: int) -> Iterator[Partition]:
                         yield n, partition[:e] + [part.union({n})] + partition[e + 1:]
     return (partition for _, partition in intern(n))
 
-def is_regular(partition: Partition):
+
+def is_regular(partition: Partition) -> bool:
+    """
+    Returns True if the given partition is composed of only singletons and is not composed of only one entity
+    """
     return (not contains_one_entity(partition)) and (not is_dual(partition))
 
+
 def contains_singleton(partition: Partition):
+    """
+    Returns Ture if the given partition contains at least one singleton
+    """
     return any((len(entity) == 1 for entity in partition))
 
+
 def contains_one_entity(partition: Partition):
+    """
+    Returns True if the given  partition is composed of only one entity
+    """
     return len(partition) == 1
 
+
 def is_dual(partition: Partition):
+    """
+    Return True if the given partition is composed only of singletons
+    """
     return all((len(entity) == 1 for entity in partition))

@@ -17,8 +17,11 @@ from partition_utils import Partition, singleton_partition, entity_partition, be
 from utils import ScoreHolder, evaluates, to_tuple, simple_and_acc, simple_or_acc,\
     list_and_acc, list_and_acc_acc, list_or_acc, list_or_acc_acc
 
+T = TypeVar('T')
+U = TypeVar('U')
+V = TypeVar('V')
 
-def a1_test() -> ScoreHolder:
+def a1_test() -> ScoreHolder[bool]:
     def intern(x: float, y: float) -> bool:
         return not isclose(x, y) and x > y
 
@@ -27,7 +30,7 @@ def a1_test() -> ScoreHolder:
     return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
 
 
-def a2_test() -> ScoreHolder:
+def a2_test() -> ScoreHolder[bool]:
     def intern(x: float, y: float) -> bool:
         return not isclose(x, y) and x > y
 
@@ -36,7 +39,7 @@ def a2_test() -> ScoreHolder:
     return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
 
 
-def a3_test() -> ScoreHolder:
+def a3_test() -> ScoreHolder[bool]:
     def intern(x: float, y: float) -> bool:
         return not isclose(x, y) and x > y
 
@@ -45,7 +48,7 @@ def a3_test() -> ScoreHolder:
     return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
 
 
-def b1_test() -> ScoreHolder:
+def b1_test() -> ScoreHolder[bool]:
     def intern(x: float, y: float) -> bool:
         return not isclose(x, y) and x < y
 
@@ -55,7 +58,7 @@ def b1_test() -> ScoreHolder:
     return ScoreHolder.apply(evaluates(gold, sys1), intern, evaluates(gold, sys2))
 
 
-def b2_test() -> ScoreHolder:
+def b2_test() -> ScoreHolder[bool]:
     def intern(x: float, y: float) -> bool:
         return not isclose(x, y) and x < y
 
@@ -65,7 +68,7 @@ def b2_test() -> ScoreHolder:
     return ScoreHolder.apply(evaluates(gold, sys1), intern, evaluates(gold, sys2))
 
 
-def d1_test() -> ScoreHolder:
+def d1_test() -> ScoreHolder[bool]:
     def intern(x: float, y: float) -> bool:
         return isclose(x, y)
 
@@ -76,7 +79,7 @@ def d1_test() -> ScoreHolder:
     return ScoreHolder.apply(evaluates(gold1, sys1), intern, evaluates(gold2, sys2))
 
 
-def d2_test() -> ScoreHolder:
+def d2_test() -> ScoreHolder[bool]:
     def intern(x: float, y: float) -> bool:
         return isclose(x, y)
 
@@ -86,7 +89,7 @@ def d2_test() -> ScoreHolder:
     return ScoreHolder.apply(evaluates(gold, sys1), intern, evaluates(gold, sys2))
 
 
-def f_test(gold: Partition, sys: Partition) -> ScoreHolder:
+def f_test(gold: Partition, sys: Partition) -> ScoreHolder[bool]:
     def intern(x: float) -> bool:
         return isclose(x, 0)
 
@@ -96,21 +99,21 @@ def f_test(gold: Partition, sys: Partition) -> ScoreHolder:
 
 
 
-def singleton_test(gold: Partition) -> ScoreHolder:
+def singleton_test(gold: Partition) -> ScoreHolder[float]:
     """
     evaluates the score of a partition against a partition composed only of singletons
     """
     return evaluates(gold, singleton_partition(get_mentions(gold)))
 
 
-def entity_test(gold: Partition) -> ScoreHolder:
+def entity_test(gold: Partition) -> ScoreHolder[float]:
     """
     evaluates the score of a partition against a partition composed of only one entity
     """
     return evaluates(gold, entity_partition(get_mentions(gold)))
 
 
-def non_identity_test(gold: Partition, sys: Partition) -> Optional[ScoreHolder]:
+def non_identity_test(gold: Partition, sys: Partition) -> Optional[ScoreHolder[bool]]:
     """
     evaluates whether score(gold, sys) != 1 with gold != sys
     """
@@ -124,7 +127,7 @@ def non_identity_test(gold: Partition, sys: Partition) -> Optional[ScoreHolder]:
     return evaluates(gold, sys).apply_to_values(intern)
 
 
-def identity_test(gold: Partition) -> ScoreHolder:
+def identity_test(gold: Partition) -> ScoreHolder[bool]:
     """
     evaluates whether score(gold, gold) = 1
     """
@@ -135,7 +138,7 @@ def identity_test(gold: Partition) -> ScoreHolder:
     return evaluates(gold, gold).apply_to_values(intern)
 
 
-def metric_1_symetry_test(gold: Partition, sys: Partition) -> ScoreHolder:
+def metric_1_symetry_test(gold: Partition, sys: Partition) -> ScoreHolder[bool]:
     """
     evaluates whether score(gold, sys) = score(sys, gold)
     """
@@ -146,21 +149,21 @@ def metric_1_symetry_test(gold: Partition, sys: Partition) -> ScoreHolder:
     return ScoreHolder.apply(evaluates(gold, sys), intern, evaluates(sys, gold))
 
 
-def metric_2_non_negativity_test(gold: Partition) -> ScoreHolder:
+def metric_2_non_negativity_test(gold: Partition) -> ScoreHolder[bool]:
     def intern(x: float) -> bool:
         return isclose(x, 0) or x > 0
 
     return evaluates(gold, gold).apply_to_values(intern)
 
 
-def metric_3(gold: Partition, sys: Partition) -> ScoreHolder:
+def metric_3(gold: Partition, sys: Partition) -> ScoreHolder[bool]:
     def intern(x: float, y:float) -> bool:
         return isclose(x, y) or x > y
 
     return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
 
 
-def metric_4_triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder:
+def metric_4_triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHolder[bool]:
     """
     evaluates whether the (similarity) triangle inequality is respected
     s(a,b) + s(b,c) <= s(b,b) + s(a,b)
@@ -171,7 +174,7 @@ def metric_4_triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHol
 
     return ScoreHolder.apply(evaluates(a, b) + evaluates(b, c), intern, evaluates(b, b) + evaluates(a, c))
 
-def metric_5_indiscernable(gold: Partition, sys: Partition) -> ScoreHolder:
+def metric_5_indiscernable(gold: Partition, sys: Partition) -> ScoreHolder[bool]:
     def intern1(x: float, y: float):
         return isclose(x, y)
 
@@ -200,56 +203,33 @@ def metric_5_indiscernable(gold: Partition, sys: Partition) -> ScoreHolder:
         ).apply_to_values(lambda k: not k)
 
 
-def metric_6(gold: Partition, sys: Partition) -> ScoreHolder:
+def metric_6(gold: Partition, sys: Partition) -> ScoreHolder[bool]:
     def intern(x: float):
         return isclose(x, 1) or x < 1
 
     return evaluates(gold, sys).apply_to_values(intern)
 
 
-def metric_7(gold: Partition):
+def metric_7(gold: Partition) -> ScoreHolder[bool]:
     def intern(x: float):
         return isclose(x, 1)
 
     return evaluates(gold, gold).apply_to_values(intern)
 
 
-def metric_8(gold: Partition, sys: Partition):
+def metric_8(gold: Partition, sys: Partition) -> ScoreHolder[bool]:
     def intern(x: float):
         return isclose(x, 0) or x > 0
 
     return evaluates(gold, sys).apply_to_values(intern)
 
-def _randomized_test(
-        test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
-        partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
-        repetitions: int = 100,
-        beta_param: Tuple[float, float] = (1, 1)
-) -> Iterator[ScoreHolder]:
-    """
-    Apply the given test function to partitions randomly generated with partition_generators
-    """
-    n_args = len(signature(test_func).parameters)
-    m = list(range(100))
-    # repeats the test 'repetitions' times
-    for _ in range(repetitions):
-        # if no partition_generator is given partition will follow a beta partition
-        if partition_generators is None:
-            a = (beta_partition(*beta_param, m) for _ in range(n_args))
-        else:
-            if len(partition_generators) != n_args:
-                raise Exception(f'got {len(partition_generators)} partition generator, expected {n_args}')
-            a = (part(m) for part in partition_generators)
-        res = test_func(*a)
-        if res is not None:
-            yield res
 
 def randomized_test(
-        test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
+        test_func: Callable[[Partition, ...], Optional[ScoreHolder[T]]],
         partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
         repetitions: int = 100,
         beta_param: Tuple[float, float] = (1, 1)
-) -> Iterator[List[Partition], ScoreHolder]:
+) -> Iterator[List[Partition], ScoreHolder[T]]:
     """
     Apply the given test function to partitions randomly generated with partition_generators
     """
@@ -269,13 +249,13 @@ def randomized_test(
             yield partitions, res
 
 def fixed_gold_randomized_test(
-        test_func: Callable[[Partition, ...], Optional[ScoreHolder]],
+        test_func: Callable[[Partition, ...], Optional[ScoreHolder[T]]],
         it: Iterator[Partition],
         partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
         std: bool = False,
         repetitions: int = 100,
         beta_param: Tuple[float, float] = (1, 1)
-) -> Iterator[ScoreHolder]:
+) -> Iterator[List[Partition], ScoreHolder[T]]:
     n_agrs = len(signature(test_func).parameters) - 1
     for gold in it:
         m = get_mentions(gold)
@@ -294,44 +274,42 @@ def fixed_gold_randomized_test(
 
 
 def ancor_gold_randomized_test(
-        test_func: Callable[[Partition], Optional[ScoreHolder]],
+        test_func: Callable[[Partition], Optional[ScoreHolder[T]]],
         partition_generators: Optional[Tuple[Callable[[list], Partition], ...]] = None,
         std: bool = False,
         repetitions: int = 100,
         beta_param: Tuple[float, float] = (1, 1)
-) -> Iterator[ScoreHolder]:
+) -> Iterator[List[Partition], ScoreHolder[T]]:
     return fixed_gold_randomized_test(test_func, iter_ancor(), partition_generators=partition_generators, std=std,
                                       repetitions=repetitions, beta_param=beta_param)
 
 
 def all_partitions_test(
-        test_func: Callable[[Partition], Optional[ScoreHolder]],
+        test_func: Callable[[Partition], Optional[ScoreHolder[T]]],
         i: int = 1,
         filtre_func: Callable[[Partition], bool] = lambda x : True
-) -> Iterator[ScoreHolder]:
+) -> Iterator[Tuple[Partition], ScoreHolder[T]]:
     n_args = len(signature(test_func).parameters)
     for partitions in product(filter(filtre_func,all_partition_of_size(i)), repeat=n_args):
         res = test_func(*partitions)
         if res is not None:
             yield partitions, res
 
-T = TypeVar('T')
-U = TypeVar('U')
-V = TypeVar('V')
+
 class tmp_class:
     distributions = [partial(beta_partition, a=1, b=1)]#, partial(beta_partition, a=1, b=100)]
 
     def __init__(
             self,
-            test_func: Callable[[Partition, ...], ScoreHolder],
+            test_func: Callable[[Partition, ...], ScoreHolder[T]],
             descr_str: str,
             on_corpus: bool = False,
             repetitions: int = 100,
             std: bool = False,
             start: int = 1,
             end: int = 6,
-            agg= None,
-            agg2 = None
+            agg : Callable[[Iterator[T]], U]= simple_and_acc,
+            agg2 : Callable[[Iterator[U]], V] = simple_and_acc
     ):
         self.test_func = test_func
         self.n_args = len(signature(self.test_func).parameters)
@@ -344,37 +322,7 @@ class tmp_class:
         self.agg = agg
         self.agg2 = agg2
 
-    @staticmethod
-    def avg_tuples(score_holderss: Iterator[Tuple[ScoreHolder, ...]]) -> Tuple[ScoreHolder, ...]:
-        """
-        Outputs the average ScoreHolder of an iterator.
-        All of the ScoreHolder in the iterator have to have the same strucutre,
-        meanings the same keys, in the same order and tuples of similar size for each key
-        """
-        ress = list(next(score_holderss))
-        count = 1
-        for score_holders in score_holderss:
-            for n, score_holder in enumerate(score_holders):
-                ress[n] += score_holder
-            count += 1
-        for n, score_holder in enumerate(ress):
-            ress[n] /= count
-        return tuple(ress)
-
-    @staticmethod
-    def average(scoress: Iterator[ScoreHolder]) -> ScoreHolder:
-        """
-        Outputs the average ScoreHolder of an iterator.
-        All of the ScoreHolder in the iterator have to have the same strucutre,
-        meanings the same keys, in the same order and tuples of similar size for each key
-        """
-        res = next(scoress)
-        count = 1
-        for scores in scoress:
-            res += scores
-            count += 1
-        return res / count
-
+    #TODO std acc in new style
     @staticmethod
     def avg_std(scoress: Iterator[ScoreHolder]) -> Tuple[ScoreHolder, ScoreHolder]:
         """
@@ -392,18 +340,18 @@ class tmp_class:
         return (regular_sum / count,
                 ((squared_sum - (regular_sum ** 2) / count) / count) ** (1 / 2))
 
-    def intern1(self) -> Iterator[Tuple[int, ScoreHolder]]:
+    def intern1(self) -> Iterator[Tuple[int, T]]:
         for i in range(self.start, self.end):
             try :
                 yield i, self.agg(all_partitions_test(self.test_func, i=i))
             except:
                 pass
 
-    def intern2(self) -> Iterator[Tuple[Tuple[Partition, ...], ScoreHolder]]:
+    def intern2(self) -> Iterator[Tuple[int, T]]:
         for dists in product(tmp_class.distributions, repeat=self.n_args):
             yield dists, self.agg(randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions))
 
-    def intern3(self) -> Iterator[Tuple[Tuple[Partition, ...], ScoreHolder]]:
+    def intern3(self) -> Iterator[Tuple[int, T]]:
         for dists in product(tmp_class.distributions, repeat=self.n_args-1):
             yield dists, self.agg(
                 ancor_gold_randomized_test(
@@ -413,7 +361,7 @@ class tmp_class:
                 )
             )
 
-    def f(self):
+    def f(self) -> Iterator[T]:
         if self.n_args != 0:
             try :
                 yield self.agg2(self.intern1())
@@ -423,13 +371,7 @@ class tmp_class:
         #         yield self.agg2(self.intern3())
         # yield self.agg2(self.intern2())
 
-    def g(self):
-        print(self.descr_str)
-        for x in tmp_class.avg_tuples(self.f()):
-            print(x)
-        print('-------------')
-
-    def g2(self):
+    def g2(self) -> None:
         print(self.descr_str)
         for x in self.f():
             print(x)
