@@ -309,7 +309,7 @@ class tmp_class:
             repetitions: int = 100,
             std: bool = False,
             start: int = 1,
-            end: int = 6,
+            end: int = 7,
             agg : Callable[[Iterator[T]], U]= simple_and_acc,
             agg2 : Callable[[Iterator[U]], V] = simple_and_acc
     ):
@@ -399,7 +399,7 @@ ALL_TESTS = {
     metric_1_symetry_test: tmp_class(metric_1_symetry_test, 'metrique 1', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
     metric_2_non_negativity_test: tmp_class(metric_2_non_negativity_test, 'metrique 2', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
     metric_3: tmp_class(metric_3, 'metrique 3', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
-    metric_4_triangle_test: tmp_class(metric_4_triangle_test, 'metrique 4', end=5, repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
+    metric_4_triangle_test: tmp_class(metric_4_triangle_test, 'metrique 4', end=6, repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
     metric_5_indiscernable: tmp_class(metric_5_indiscernable, 'metrique 5', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
     metric_6: tmp_class(metric_6, 'metrique 6', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
     metric_7: tmp_class(metric_7, 'metrique 7', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
