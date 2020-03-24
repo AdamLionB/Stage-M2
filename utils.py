@@ -101,6 +101,12 @@ class ScoreHolder(Generic[T]):
         """
         return self.apply(lambda x, y: x - y, other)
 
+    def __and__(self, other: ScoreHolder[bool]) -> ScoreHolder[bool]:
+        return self.apply(lambda x, y: x & y, other)
+
+    def __or__(self, other: ScoreHolder[bool]) -> ScoreHolder[bool]:
+        return self.apply(lambda x, y: x | y, other)
+
     def __mul__(self, scalar: float) -> ScoreHolder[T]:
         """
         Outputs the result of the multiplication of a ScoreHolder by a scalar.
@@ -206,80 +212,156 @@ def second(x: T) -> U:
 
 
 def acc(
-        init_func: Callable[[T], U],
-        acc1: Callable[[U, T], U],
-        acc2: Callable[[U], V],
+        set_up: Callable[[T], U],
+        reducer: Callable[[U, T], U],
+        clean_up: Callable[[U], V],
         scoress: Iterator[T]
 ) -> V:
     """
-    ughh.. hard to describe, some kind of big reducer
-    Takes an init function, two reduce function and an iterator
-    applys the init function to the first element of the iterator then uses the first reduce on the reste of the iterator
-    then apply the second reduce on the result of the last reduce.
+    TODO
     """
-    res = init_func(next(scoress))
+    res = set_up(next(scoress))
     for scores in scoress:
-        res = acc1(res, scores)
-    return acc2(res)
+        res = reducer(res, scores)
+    return clean_up(res)
 
 
-def list_and_second(x: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[bool]]:
+def list_and_setup(x: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[bool]]:
     if not reduce(lambda a, b: a & b, x[1].for_important_values(), True):
         return [x[0]], x[1]
-    else :
+    else:
         return [], x[1]
 
 
-def list_or_second(x: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[bool]]:
-    if reduce(lambda a, b: a | b, x[1].for_important_values(), True):
-        return [x[0]], x[1]
-    else :
-        return [], x[1]
-
-
-def list_and(x: Tuple[List, ScoreHolder[bool]], y: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[bool]]:
-    res = ScoreHolder.apply(x[1], lambda a, b: a & b, y[1])
-    if reduce(lambda x, y: x | y,ScoreHolder.apply(x[1],lambda a, b: ((not b) and a), res).for_important_values()):
+def list_and_reducer(x: Tuple[List, ScoreHolder[bool]], y: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[bool]]:
+    res = x[1] & y[1]
+    if reduce(
+            lambda a, b: a | b,
+            ScoreHolder.apply(x[1],lambda a, b: (not b) and a, res).for_important_values()
+    ):
         return x[0]+[y[0]], res
     return x[0], res
 
 
-def list_or(x: Tuple[List, ScoreHolder[bool]], y: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[bool]]:
-    res = ScoreHolder.apply(x[1], lambda a, b: a | b, y[1])
-    if reduce(lambda x, y: x | y,ScoreHolder.apply(x[1],lambda a, b: ((not a) and b), res).for_important_values()):
+def list_or_setup(x: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[bool]]:
+    if reduce(lambda a, b: a | b, x[1].for_important_values(), True):
+        return [x[0]], x[1]
+    else:
+        return [], x[1]
+
+
+def list_or_reducer(x: Tuple[List, ScoreHolder[bool]], y: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[bool]]:
+    res = x[1] | y[1]
+    if reduce(
+            lambda a, b: a | b,
+            ScoreHolder.apply(x[1], lambda a, b: (not a) and b, res).for_important_values()
+    ):
         return x[0]+[y[0]], res
     return x[0], res
 
 
 def simple_and_acc(scoress: Iterator[Tuple[Any, ScoreHolder[bool]]]) -> ScoreHolder[bool]:
-    return acc(second, lambda x, y: ScoreHolder.apply(x, lambda a, b: a & b, second(y)), identity, scoress)
+    """
+    Returns the 'and' aggregation of the Iterator
+    """
+
+    return acc(second, lambda x, y: x & y[1], identity, scoress)
 
 
 def simple_or_acc(scoress: Iterator[Tuple[Any, ScoreHolder[bool]]]) -> ScoreHolder[bool]:
-    return acc(second, lambda x, y: ScoreHolder.apply(x, lambda a, b : a | b ,second(y)), identity, scoress)
+    """
+    Returns the 'or' aggregation of the Iterator
+    """
+    return acc(second, lambda x, y: x | y[1], identity, scoress)
 
 
-def list_and_acc(scoress: Iterator[Tuple[Any, ScoreHolder[bool]]]) -> Tuple[list, ScoreHolder[bool]]:
-    return acc(list_and_second, list_and, identity, scoress)
+def macro_avg_acc(scoress: Iterator[Tuple[Any, ScoreHolder[float]]]) -> ScoreHolder[float]:
+    return acc(
+        lambda x: (1, x[1]),
+        lambda x, y: (x[0] + 1, x[1] + y[1]),
+        lambda x: x[1] / x[0],
+        scoress
+    )
+
+def macro_avg_std_acc1(scoress:Iterator[Tuple[Any, ScoreHolder[float]]]) -> Tuple[ScoreHolder[float], ScoreHolder[float]]:
+    return acc(
+        lambda x: (1, x[1], x[1]**2),
+        lambda x, y: (x[0]+1, x[1]+y[1], x[2]+(y[1]**2)),
+        lambda x : (x[1]/ x[0], ((x[2] - (x[1]**2) / x[0]) / x[0]) ** (1/2)),
+        scoress
+    )
+
+def macro_avg_std_acc2(
+        scoress: Iterator[Tuple[Any, Tuple[ScoreHolder[float], ScoreHolder[float]]]]
+) -> Tuple[ScoreHolder[float], ScoreHolder[float]]:
+    return acc(
+        lambda x: (1, x[1][0], x[1][1]),
+        lambda x, y: (x[0]+1, x[1]+y[1][0], x[2]+y[1][1]),
+        lambda x : (x[1] / x[0], x[2] / x[0]),
+        scoress
+    )
+
+def micro_avg_acc1(scoress: Iterator[Tuple[Any, ScoreHolder[float]]]) -> Tuple[int, ScoreHolder[float]]:
+    return acc(
+        lambda x: (1, x[1]),
+        lambda x, y: (x[0] + 1, x[1] + y[1]),
+        lambda x: x,
+        scoress
+    )
+
+def micro_avg_acc2(scoress: Iterator[Tuple[Any, Tuple[int, ScoreHolder[float]]]]) -> ScoreHolder:
+    return acc(
+        lambda x: x[1],
+        lambda x, y: (x[0]+y[1][0], x[1]+y[1][1]),
+        lambda x: x[1] / x[0],
+        scoress
+    )
 
 
-def list_or_acc(scoress: Iterator[Tuple[Any, ScoreHolder[bool]]]) -> Tuple[list, ScoreHolder[bool]]:
-    return acc(list_or_second, list_or, identity, scoress)
+def micro_avg_std_acc1(scoress:Iterator[Tuple[Any, ScoreHolder[float]]]) -> Tuple[int, ScoreHolder[float], ScoreHolder[float]]:
+    return acc(
+        lambda x: (1, x[1], x[1]**2),
+        lambda x, y: (x[0]+1, x[1]+y[1], x[2]+(y[1]**2)),
+        lambda x: x,
+        scoress
+    )
 
 
-def list_and_acc_acc(scoress: Iterator[Tuple[list, ScoreHolder[bool]]]) -> Tuple[list, ScoreHolder[bool]]:
+def micro_avg_std_acc2(scoress: Iterator[Tuple[Any, Tuple[int, ScoreHolder[float], ScoreHolder[float]]]]):
+    return acc(
+        lambda x: x[1],
+        lambda x, y: (x[0]+y[1][0], x[1]+y[1][1], x[2]+(y[1][2])),
+        lambda x: (x[1]/ x[0], ((x[2] - (x[1]**2) / x[0]) / x[0]) ** (1/2)),
+        scoress
+    )
+
+def list_and_acc1(scoress: Iterator[Tuple[Any, ScoreHolder[bool]]]) -> Tuple[list, ScoreHolder[bool]]:
+    """
+    Returns the 'and' aggregation of the Iterator and the list of case where a test fails for the first time for a score
+    """
+    return acc(list_and_setup, list_and_reducer, identity, scoress)
+
+
+def list_and_acc2(scoress: Iterator[Tuple[list, ScoreHolder[bool]]]) -> Tuple[list, ScoreHolder[bool]]:
     return acc(
         lambda x: ([x[0], x[1][0]], x[1][1]),
-        lambda x, y: (x[0] + [(y[0], y[1][0])], ScoreHolder.apply(x[1], lambda a, b: a & b, y[1][1])),
+        lambda x, y: (x[0] + [(y[0], y[1][0])], x[1] & y[1][1]),
         identity,
         scoress
     )
 
 
-def list_or_acc_acc(scoress: Iterator[Tuple[list, ScoreHolder[bool]]]) -> Tuple[list, ScoreHolder[bool]]:
+def list_or_acc1(scoress: Iterator[Tuple[Any, ScoreHolder[bool]]]) -> Tuple[list, ScoreHolder[bool]]:
+    """
+    Returns the 'or' aggregation of the Iterator and the list of case where a test fails for the first time for a score
+    """
+    return acc(list_or_setup, list_or_reducer, identity, scoress)
+
+
+def list_or_acc2(scoress: Iterator[Tuple[list, ScoreHolder[bool]]]) -> Tuple[list, ScoreHolder[bool]]:
     return acc(
         lambda x: ([x[0], x[1][0]], x[1][1]),
-        lambda x, y: (x[0]+[(y[0], y[1][0])], ScoreHolder.apply(x[1], lambda a, b : a | b, y[1][1])),
+        lambda x, y: (x[0]+[(y[0], y[1][0])], x[1] | y[1][1]),
         identity,
         scoress
     )

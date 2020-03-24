@@ -15,7 +15,8 @@ from scorch.main import clusters_from_json
 from partition_utils import Partition, singleton_partition, entity_partition, beta_partition, get_mentions, \
     all_partition_of_size, is_regular, contains_singleton
 from utils import ScoreHolder, evaluates, to_tuple, simple_and_acc, simple_or_acc,\
-    list_and_acc, list_and_acc_acc, list_or_acc, list_or_acc_acc
+    list_and_acc1, list_and_acc2, list_or_acc1, list_or_acc2, micro_avg_acc1, micro_avg_acc2, \
+    micro_avg_std_acc1, micro_avg_std_acc2, macro_avg_acc, macro_avg_std_acc1, macro_avg_std_acc2
 
 T = TypeVar('T')
 U = TypeVar('U')
@@ -381,8 +382,6 @@ class tmp_class:
         map(to_tuple, self.intern1())
 
 
-
-
 ALL_TESTS = {
     a1_test: tmp_class(a1_test, 'a1', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
     a2_test: tmp_class(a2_test, 'a2', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
@@ -394,16 +393,16 @@ ALL_TESTS = {
     identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),# agg=list_and_acc, agg2=list_and_acc_acc)
     non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2, end=4, agg= simple_and_acc, agg2=simple_and_acc),
     f_test: tmp_class(f_test, 'f', repetitions=100, agg=simple_or_acc, agg2=simple_or_acc),
-    metric_1_symetry_test: tmp_class(metric_1_symetry_test, 'metrique 1', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc ),
-    metric_2_non_negativity_test: tmp_class(metric_2_non_negativity_test, 'metrique 2', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
-    metric_3: tmp_class(metric_3, 'metrique 3', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
-    metric_4_triangle_test: tmp_class(metric_4_triangle_test, 'metrique 4', end=5, repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
-    metric_5_indiscernable: tmp_class(metric_5_indiscernable, 'metrique 5', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
-    metric_6: tmp_class(metric_6, 'metrique 6', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
-    metric_7: tmp_class(metric_7, 'metrique 7', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
-    metric_8: tmp_class(metric_8, 'metrique 8', repetitions=100, agg= list_and_acc, agg2=list_and_acc_acc),
-    singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),
-    entity_test: tmp_class(entity_test, 'entity', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),
+    metric_1_symetry_test: tmp_class(metric_1_symetry_test, 'metrique 1', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
+    metric_2_non_negativity_test: tmp_class(metric_2_non_negativity_test, 'metrique 2', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
+    metric_3: tmp_class(metric_3, 'metrique 3', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
+    metric_4_triangle_test: tmp_class(metric_4_triangle_test, 'metrique 4', end=5, repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
+    metric_5_indiscernable: tmp_class(metric_5_indiscernable, 'metrique 5', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
+    metric_6: tmp_class(metric_6, 'metrique 6', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
+    metric_7: tmp_class(metric_7, 'metrique 7', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
+    metric_8: tmp_class(metric_8, 'metrique 8', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
+    singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100, agg= macro_avg_acc, agg2=macro_avg_acc),
+    entity_test: tmp_class(entity_test, 'entity', repetitions=100, agg= macro_avg_std_acc1, agg2=macro_avg_std_acc2),
 }
 
 
