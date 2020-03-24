@@ -6,6 +6,7 @@ from functools import partial
 from itertools import product
 
 x = [singleton_test, entity_test, identity_test, metric_1_symetry_test, metric_4_triangle_test]
+x= [singleton_test, entity_test]
 for k, v in ALL_TESTS.items():
     if k in x:
         v.g2()

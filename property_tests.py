@@ -305,6 +305,7 @@ class tmp_class:
             test_func: Callable[[Partition, ...], ScoreHolder[T]],
             descr_str: str,
             on_corpus: bool = False,
+            randomize: bool = False,
             repetitions: int = 100,
             std: bool = False,
             start: int = 1,
@@ -316,6 +317,7 @@ class tmp_class:
         self.n_args = len(signature(self.test_func).parameters)
         self.descr_str = descr_str
         self.on_corpus = on_corpus
+        self.randomize = randomize
         self.repetitions = repetitions
         self.std = std
         self.start = start
@@ -368,9 +370,10 @@ class tmp_class:
                 yield self.agg2(self.intern1())
             except StopIteration:
                 pass
-        #     if self.on_corpus:
-        #         yield self.agg2(self.intern3())
-        # yield self.agg2(self.intern2())
+            if self.on_corpus:
+                yield self.agg2(self.intern3())
+        if self.randomize:
+            yield self.agg2(self.intern2())
 
     def g2(self) -> None:
         print(self.descr_str)
@@ -401,8 +404,8 @@ ALL_TESTS = {
     metric_6: tmp_class(metric_6, 'metrique 6', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
     metric_7: tmp_class(metric_7, 'metrique 7', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
     metric_8: tmp_class(metric_8, 'metrique 8', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
-    singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100, agg= macro_avg_acc, agg2=macro_avg_acc),
-    entity_test: tmp_class(entity_test, 'entity', repetitions=100, agg= macro_avg_std_acc1, agg2=macro_avg_std_acc2),
+    singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100, agg= macro_avg_acc, agg2=macro_avg_acc, randomize=True),
+    entity_test: tmp_class(entity_test, 'entity', repetitions=100, agg= macro_avg_std_acc1, agg2=macro_avg_std_acc2, randomize=True),
 }
 
 
