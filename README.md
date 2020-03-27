@@ -1,0 +1,1 @@
+> python3 -m pip install --user git+https://github.com/LoicGrobol/scorch.git
