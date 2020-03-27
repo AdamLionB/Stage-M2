@@ -1,0 +1,43 @@
+body {
+	margin: 0;
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+header{
+	height: 10%;
+	background-color: #555;
+}
+
+aside{
+	float: left;
+	width: 15%;
+	position: sticky;
+	top: 0;
+}
+
+aside > ul{
+	list-style-type: none;
+}
+
+aside > ul > li a {
+	display: block;
+	color: #000;
+	padding: 8px 16px;
+	text-decoration: none;
+}
+  
+aside > ul > li a.active {
+	background-color: #f1f1f1;
+}
+  
+aside > ul > li a:hover:not(.active) {
+	background-color: #555;
+	color: white;
+}
+
+main {
+	margin-left:25%;
+	margin-right:25%;
+	text-align: justify;
+}
+
