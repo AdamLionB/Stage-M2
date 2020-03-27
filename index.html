@@ -2,26 +2,48 @@
   <head>
     <link rel="stylesheet" type="text/css" href="style.css">
   </head>
+  <script>
+  function func(button_pressed){
+    classes = button_pressed.classList
+    button_id = button_pressed.id.toString();
+
+    if (classes.contains('active')){
+      classes.remove('active');
+      for (el of document.getElementsByClassName(button_id)){
+        el.style.display = "none"
+      }  
+    }
+    else{
+      classes.add('active');
+      for (el of document.getElementsByClassName(button_id)){
+        el.style.display = "block"
+      }
+    }
+
+    
+  }
+  </script>
   <body>
     <header>
     </header>
     <aside>
       <ul>
-        <li><a class="active" href="#textual_description">textual description</a></li>
-        <li><a class="active" href="#formal_description">description</a></li>
-        <li><a class="active" href="#citations">citations</a></li>
+        <li><input class="button active" id="text_descr" type="button" value="description textuel" onclick="func(this)"></li>
+        <li><input class="button active" id="form_desc" type="button" value="description formel" onclick="func(this)"></li>
+        <li><input class="button active" id="citations" type="button" value="citations" onclick="func(this)"></input></li>
       </ul>
     </aside>
 
     <main>
+      <p id="debug"></p>
       <article class="properties" id="property1">
         <h1>Propriété 1</h1>
         
-        <section class="textual description">
+        <section class="text_descr">
           <h2>description</h2>
         </section>
         
-        <section class="formal description">
+        <section class="form_desc">
           <h2>maths</h2>
         </section>
         
@@ -33,11 +55,11 @@
       <article class="properties" id="property2">
         <h1>Propriété 2</h1>
         
-        <section class="textual description">
+        <section class="text_descr">
           <h2>description</h2>
         </section>
         
-        <section class="formal description">
+        <section class="form_desc">
           <h2>maths</h2>
         </section>
         
