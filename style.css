@@ -10,12 +10,15 @@ header{
 
 aside{
 	float: left;
-	width: 15%;
 	position: sticky;
 	top: 0;
+	overflow-y: scroll;
+	height: 100%;
+	direction: rtl;
 }
 
 aside > ul{
+	direction:ltr;
 	list-style-type: none;
 }
 
@@ -35,11 +38,11 @@ aside > ul > li .button{
 }
 
 aside > ul > li *.active {
-	background-color: #f1f1f1;
+	background-color: rgb(236, 245, 207);
 }
 
 aside > ul > li *:not(.active){
-	background-color: white;
+	background-color: rgb(255, 226, 226);
 }
   
 aside > ul > li *:hover:not(.active) {
@@ -47,12 +50,74 @@ aside > ul > li *:hover:not(.active) {
 }
 
 aside > ul > li *.active:hover {
-	background-color: rgb(255,204,204);
+	background-color: rgb(255,204,204); 
 }
 
 main {
-	margin-left:25%;
-	margin-right:25%;
+	margin-left:20%;
 	text-align: justify;
 }
 
+article > * {
+	margin-top: 4px;
+	margin-bottom: 4px;
+}
+
+section > * {
+	margin-top: 4px;
+	margin-bottom: 4px;
+}
+
+section{
+	overflow: auto;
+}
+
+article{
+	overflow: auto;
+}
+
+h1{
+	font-size: 32px;
+}
+
+h2{
+	float: left;
+	clear: left;
+	width: 10%;
+}
+
+div {
+	overflow: auto;
+	float: left;
+	margin-left:5%;
+	padding-top: 8px;
+	padding-bottom: 4px;
+	width: 50%;
+	padding-right: 10px;
+}
+
+div > div{
+	clear: left;
+	margin-left:0;
+	width: 100%;
+}
+
+table {
+	font-family: arial, sans-serif;
+	border-collapse: collapse;
+	width: 100%;
+	display: block;
+}
+  
+
+
+td, th {
+	border: 1px solid #dddddd;
+	text-align: left;
+	padding: 8px;
+	display: inline-flexbox;
+}
+
+td.x {
+	background-color: rgb(255,204,204);
+}
