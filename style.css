@@ -8,6 +8,10 @@ header{
 	background-color: #555;
 }
 
+header > h1{
+	color: white;
+}
+
 aside{
 	float: left;
 	position: sticky;
@@ -120,4 +124,9 @@ td, th {
 
 td.x {
 	background-color: rgb(255,204,204);
+}
+
+.remarque{
+	color: green;
+	font-weight: bold;
 }

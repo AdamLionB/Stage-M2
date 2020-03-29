@@ -20,53 +20,94 @@
         elements_affected = document.getElementsByClassName(button_pressed.id)
         if (classes.contains('active')){
           classes.remove('active')
-          display = "none"
+          display = true
+          mod = -1
         }
         else{
           classes.add('active')
-          display = ""
-          
+          display = false
+          mod = 1
         }
-        for (elements of elements_affected){
-            elements.style.display = display
+        for (element of elements_affected){
+          val = element.getAttribute('VAL')
+          if (val === null){
+            element.hidden = display
+          }
+          else{
+            element.setAttribute('VAL', parseInt(val) + mod)
+            element.hidden = (parseInt(element.getAttribute('VAL')) === 0)
+          }
         }
       }
       </script>
   </head>
   <body>
     <header>
+      <h1>Sont affiché les éléments dont les parent sont affichés
+        et dont au moins un attribut d'affichage est vert</h1>
     </header>
     <aside>
       <ul>
         <h3>Scores</h3>
-        <li><input class="button active" id="muc" type="button" value="MUC" onclick="func(this)"></li>
-        <li><input class="button active" id="b3" type="button" value="B3" onclick="func(this)"></li>
-        <li><input class="button active" id="ceafm" type="button" value="CEAF_m" onclick="func(this)"></input></li>
-        <li><input class="button active" id="ceafe" type="button" value="CEAF_e" onclick="func(this)"></input></li>
-        <li><input class="button active" id="blanc" type="button" value="BLANC" onclick="func(this)"></input></li>
-        <li><input class="button active" id="lea" type="button" value="LEA" onclick="func(this)"></input></li>
-        <li><input class="button active" id="conll" type="button" value="CONLL" onclick="func(this)"></input></li>
+        <li><input class="button active" id="muc" type="button" 
+          value="MUC" onclick="func(this)"></li>
+        <li><input class="button active" id="b3" type="button" 
+          value="B3" onclick="func(this)"></li>
+        <li><input class="button active" id="ceafm" type="button" 
+          value="CEAF_m" onclick="func(this)"></li>
+        <li><input class="button active" id="ceafe" type="button" 
+          value="CEAF_e" onclick="func(this)"></li>
+        <li><input class="button active" id="blanc" type="button" 
+          value="BLANC" onclick="func(this)"></li>
+        <li><input class="button active" id="lea" type="button" 
+          value="LEA" onclick="func(this)"></li>
+        <li><input class="button active" id="conll" type="button" 
+          value="CONLL" onclick="func(this)"></li>
       </ul>
       <ul>
         <h3>Catégories</h3>
-        <li><input class="button active" id="metric" type="button" value="métrique" onclick="func(this)"></li>
-        <li><input class="button active" id="singleton" type="button" value="singleton" onclick="func(this)"></li>
-        <li><input class="button active" id="biais" type="button" value="biais" onclick="func(this)"></li>
+        <li><input class="button active" id="metric" type="button" 
+          value="métrique" onclick="func(this)"></li>
+        <li><input class="button active" id="singleton" type="button" 
+          value="singleton" onclick="func(this)"></li>
+        <li><input class="button active" id="biais" type="button" 
+          value="biais" onclick="func(this)"></li>
+        <li><input class="button active" id="weight" type="button" 
+          value="Pondération" onclick="func(this)"></li>
+      </ul>
+      <ul>
+        <h3>Types</h3>
+        <li><input class="button" id="system" type="button" 
+          value="système" onclick="func(this)"></li>
+        <li><input class="button" id="data" type="button" 
+          value="data" onclick="func(this)"></li>
       </ul>
       <ul>
         <h3>Descripteurs</h3>
-        <li><input class="button active" id="text_descr" type="button" value="description textuel" onclick="func(this)"></li>
-        <li><input class="button active" id="form_desc" type="button" value="description formel" onclick="func(this)"></li>
-        <li><input class="button active" id="citations" type="button" value="citations" onclick="func(this)"></input></li>
-        <li><input class="button active" id="test" type="button" value="tests" onclick="func(this)"></input></li>
-        <li><input class="button active" id="res" type="button" value="resultats" onclick="func(this)"></input></li>
+        <li><input class="button active" id="types" type="button" 
+          value="types" onclick="func(this)"></li>
+        <li><input class="button active" id="text_descr" type="button" 
+          value="description textuel" onclick="func(this)"></li>
+        <li><input class="button active" id="form_desc" type="button" 
+          value="description formel" onclick="func(this)"></li>
+        <li><input class="button active" id="citations" type="button" 
+          value="citations" onclick="func(this)"></li>
+        <li><input class="button active" id="test" type="button" 
+          value="tests" onclick="func(this)"></li>
+        <li><input class="button active" id="res" type="button" 
+          value="resultats" onclick="func(this)"></li>
       </ul>
     </aside>
 
     <main>
-      <article class="properties metric score" id="MET_1">
+      <article class="metric system" id="MET_1" val="1">
         <h1>Metrique 1 - Symétrie</h1>
-        
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            Metric, système
+          </div>
+        </section>
         <section class="text_descr">
           <h2>description</h2>
           <div>Le score n'est pas influencé par l'ordre de ces paramètres</div>
@@ -97,9 +138,16 @@
         </section>
       </article>
 
-      <article class="properties metric score" id="MET_2">
+      <article class="metric system" id="MET_2" val="1">
         <h1>Métrique 2 - Non-négativité de l'identité?</h1>
         
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            Metric, système
+          </div>
+        </section>
+
         <section class="text_descr">
           <h2>description</h2>
           <div>Le score d'un élement comparer à lui même est positif. </div>
@@ -129,12 +177,21 @@
         </section>
       </article>
 
-      <article class="properties metric score" id="MET_3">
+      <article class="metric system" id="MET_3" val="1">
         <h1>Métrique 2 - Supériorité de l'identité?</h1>
         
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            Metric, système
+          </div>
+        </section>
+
         <section class="text_descr">
           <h2>description</h2>
-          <div>Le score d'un élement comparer à lui même est supérieur ou égal à tout autre score. </div>
+          <div>
+            Le score d'un élement comparer à lui même est supérieur ou égal à tout autre score.
+          </div>
         </section>
         
         <section class="form_desc">
@@ -161,9 +218,16 @@
         </section>
       </article>
 
-      <article class="properties metric score" id="MET_4">
+      <article class="metric system" id="MET_4" val="1">
         <h1>Métrique 4 - Inégalité triangulaire</h1>
         
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            Metric, système
+          </div>
+        </section>
+
         <section class="text_descr">
           <h2>description</h2>
           <div>Le score respecte l'inégalité triangulaire.</div>
@@ -193,12 +257,22 @@
         </section>
       </article>
 
-      <article class="properties metric score" id="MET_5">
+      <article class="metric system" id="MET_5" val="1">
         <h1>Métrique 5 - Identité des indiscernable</h1>
         
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            Metric, système
+          </div>
+        </section>
+
         <section class="text_descr">
           <h2>description</h2>
-          <div>Si et seulement si deux élements ne peuvent être distinguer par le score alors il sont égaux </div>
+          <div>
+            Si et seulement si deux élements ne peuvent être distinguer par le score alors 
+            ils sont égaux 
+          </div>
         </section>
         
         <section class="form_desc">
@@ -225,9 +299,16 @@
         </section>
       </article>
       
-      <article class="properties metric score" id="MET_6">
+      <article class="metric system" id="MET_6" val="1">
         <h1>Métrique 5 - Borné par 1</h1>
         
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            Metric, système
+          </div>
+        </section>
+
         <section class="text_descr">
           <h2>description</h2>
           <div>Le score est borné par le haut par 1. </div>
@@ -257,9 +338,16 @@
         </section>
       </article>
 
-      <article class="properties metric score" id='MET_7'>
+      <article class="metric system" id='MET_7' val="1">
         <h1>Métrique 7- L'identité donne 1</h1>
         
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            Metric, système
+          </div>
+        </section>
+
         <section class="text_descr">
           <h2>description</h2>
           <div>Le score d'un élément comparer à lui lui-même est 1.</div>
@@ -289,9 +377,16 @@
         </section>
       </article>
 
-      <article class="properties metric score" id="MET_8">
+      <article class="metric system" id="MET_8" val="1">
         <h1>Métrique 8 - Non-négativité</h1>
         
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            Metric, système
+          </div>
+        </section>
+
         <section class="text_descr">
           <h2>description</h2>
           <div>Le score est positif.</div>
@@ -321,9 +416,16 @@
         </section>
       </article>
 
-      <article class="properties singleton score" id="SING_1">
+      <article class="singleton system" id="SING_1" val="1">
         <h1>Singleton 1 - NAME #rename</h1>
         
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            Singleton, système
+          </div>
+        </section>
+
         <section class="text_descr">
           <h2>description</h2>
           <div>Le score distingue une correcte résolution de singleton d’une mauvaise<br>
@@ -378,160 +480,40 @@
             <div>
               <h3>a1</h3>
               <table>
-                <tr>
-                  <th>Score</th>
-                  <th>F</th>
-                  <th>R</th>
-                  <th>P</th>
-                </tr>
-                <tr class="muc">
-                  <td>MUC</td>
-                  <td class='y'>passed</td>
-                  <td class='x'>failed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="b3">
-                  <td>b3</td>
-                  <td class='y'>passed</td>
-                  <td class='x'>failed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="ceafm">
-                  <td>ceafm</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="ceafe">
-                  <td>ceafe</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="blanc">
-                  <td>blanc</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="lea">
-                  <td>lea</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="conll">
-                  <td>conll</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
+                <tr><th>Score</th><th>F</th><th>R</th><th>P</th></tr>
+                <tr class="muc"><td>MUC</td><td class='y'>passed</td><td class='x'>failed</td><td class='y'>passed</td></tr>
+                <tr class="b3"><td>b3</td><td class='y'>passed</td><td class='x'>failed</td><td class='y'>passed</td></tr>
+                <tr class="ceafm"><td>ceafm</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
+                <tr class="ceafe"><td>ceafe</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
+                <tr class="blanc"><td>blanc</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
+                <tr class="lea"><td>lea</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
+                <tr class="conll"><td>conll</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
               </table>
             </div>
             <div>
               <h3>a2</h3>
               <table>
-                <tr>
-                  <th>Score</th>
-                  <th>F</th>
-                  <th>R</th>
-                  <th>P</th>
-                </tr>
-                <tr class="muc">
-                  <td>MUC</td>
-                  <td class='y'>failed</td>
-                  <td class='x'>failed</td>
-                  <td class='y'>failed</td>
-                </tr>
-                <tr class="b3">
-                  <td>b3</td>
-                  <td class='y'>passed</td>
-                  <td class='x'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="ceafm">
-                  <td>ceafm</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="ceafe">
-                  <td>ceafe</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="blanc">
-                  <td>blanc</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="lea">
-                  <td>lea</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="conll">
-                  <td>conll</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
+                <tr><th>Score</th><th>F</th><th>R</th><th>P</th></tr>
+                <tr class="muc"><td>MUC</td><td class='y'>failed</td><td class='x'>failed</td><td class='y'>failed</td></tr>
+                <tr class="b3"><td>b3</td><td class='y'>passed</td><td class='x'>passed</td><td class='y'>passed</td></tr>
+                <tr class="ceafm"><td>ceafm</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
+                <tr class="ceafe"><td>ceafe</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
+                <tr class="blanc"><td>blanc</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
+                <tr class="lea"><td>lea</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
+                <tr class="conll"><td>conll</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
               </table>
             </div>
             <div>
               <h3>b1</h3>
               <table>
-                <tr>
-                  <th>Score</th>
-                  <th>F</th>
-                  <th>R</th>
-                  <th>P</th>
-                </tr>
-                <tr class="muc">
-                  <td>MUC</td>
-                  <td class='y'>passed</td>
-                  <td class='x'>failed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="b3">
-                  <td>b3</td>
-                  <td class='y'>passed</td>
-                  <td class='x'>failed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="ceafm">
-                  <td>ceafm</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="ceafe">
-                  <td>ceafe</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="blanc">
-                  <td>blanc</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="lea">
-                  <td>lea</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
-                <tr class="conll">
-                  <td>conll</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                  <td class='y'>passed</td>
-                </tr>
+                <tr><th>Score</th><th>F</th><th>R</th><th>P</th></tr>
+                <tr class="muc"><td>MUC</td><td class='y'>passed</td><td class='x'>failed</td><td class='y'>passed</td></tr>
+                <tr class="b3"><td>b3</td><td class='y'>passed</td><td class='x'>failed</td><td class='y'>passed</td></tr>
+                <tr class="ceafm"><td>ceafm</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
+                <tr class="ceafe"><td>ceafe</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
+                <tr class="blanc"><td>blanc</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
+                <tr class="lea"><td>lea</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
+                <tr class="conll"><td>conll</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
               </table>
             </div>
           </div> 
@@ -541,33 +523,65 @@
           <h2>citations</h2>
           <div>
             <div>
-              <p>[MUC] does not give any credit for separating out singletons (entities that occur in chains consisting only of one element, the entity itself) from other chains which have been identified.</p>
+              <p>
+                [MUC] does not give any credit for separating out singletons (entities that occur in
+                chains consisting only of one element, the entity itself) from other chains which
+                have been identified.
+              </p>
               <p>BAGGA ET BALDWIN, ALGORITHMS FOR SCORING COREFERENCE CHAINS, 1998 (B3)</p>
             </div>
             <div>
-              <p>[MUC] ignores single-mention entities since no link can be found in these entities</p>
+              <p>
+                [MUC] ignores single-mention entities since no link can be found in these entities
+              </p>
               <p>LUO, ON COREFERENCE RESOLUTION PERFORMANCE METRICS 2005 (CEAF)</p>
             </div>
             <div>
-              <p>given that [MUC] only takes into account coreference links, the addition of singletons to SYS does not make any difference. It is only when a singleton mention is misclassified in a multi-mention entity that the MUC score decreases. </p>
-              <p>RECASENS ET HOVY, BLANC: IMPLEMENTING THE RAND INDEX FOR COREFERENCE EVALUATION, 2011</p>
+              <p>
+                given that [MUC] only takes into account coreference links, the addition of
+                singletons to SYS does not make any difference. It is only when a singleton mention
+                is misclassified in a multi-mention entity that the MUC score decreases.
+              </p>
+              <p>
+                RECASENS ET HOVY, BLANC: IMPLEMENTING THE RAND INDEX FOR COREFERENCE EVALUATION,
+                2011
+              </p>
             </div>
             <div>
-              <p>[MUC] has an incorrect preference in ranking coreference outputs. MUC favors the outputs in which entities are over-merged (Luo, 2005). For instance, if we link all the key mentions of the CoNLL 2012 test set into a single response entity, the corresponding MUC scores, i.e. Recall=100, Precision=78.44 and F1=87.91, will be all higher than those of the state-of-the-art system</p>
-              <p>MOOSAVI ET STRUBE, WHICH COREFERENCE EVALUATION METRIC DO YOU TRUST? A PROPOSAL FOR A LINK-BASED ENTITY AWARE METRIC, 2016 (LEA)</p>
+              <p>
+                [MUC] has an incorrect preference in ranking coreference outputs. MUC favors the
+                outputs in which entities are over-merged (Luo, 2005). For instance, if we link all
+                the key mentions of the CoNLL 2012 test set into a single response entity, the
+                corresponding MUC scores, i.e. Recall=100, Precision=78.44 and F1=87.91, will be all
+                higher than those of the state-of-the-art system
+              </p>
+              <p>
+                MOOSAVI ET STRUBE, WHICH COREFERENCE EVALUATION METRIC DO YOU TRUST? A PROPOSAL
+                FOR A LINK-BASED ENTITY AWARE METRIC, 2016 (LEA)
+              </p>
             </div>
           </div>
         </section>
       </article>
 
-      <article class="properties biais score" id="BIAIS_1">
+      <article class="biais system" id="BIAIS_1" val="1">
         <h1>BIAIS 1 - NAME #rename</h1>
+
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            biais, système
+          </div>
+        </section>
+
         <section class="text_descr">
           <h2>description</h2>
           <div>
             le score privilégie la fusion de deux entités à une mauvaise affectation<br>
-            Une erreur se traduisant par une fusion d’entité est-elle moins pénalisée qu’une erreur se traduisant par une mauvaise affectation de mention ?<br>
-            Une erreur est analysée en termes de relation d’édition de lien (insertion, délétion, substitution) (ici substitution vs. insertion).  <br>
+            Une erreur se traduisant par une fusion d’entité est-elle moins pénalisée qu’une erreur
+            se traduisant par une mauvaise affectation de mention ?<br>
+            Une erreur est analysée en termes de relation d’édition de lien
+            (insertion, délétion, substitution) (ici substitution vs. insertion).  <br>
             Le score peut :<br>
             a-	Dans tous les cas privilégier la fusion d’entité<br>
             b-	Dans tous les cas privilégier la mauvaise affectation<br>
@@ -591,38 +605,14 @@
           <h2>resultats</h2>
           <div>
             <table>
-              <tr>
-                <th>Score</th>
-                <th>F</th>
-              </tr>
-              <tr class="muc">
-                <td>MUC</td>
-                <td class='y'>passed</td>
-              </tr>
-              <tr class="b3">
-                <td>b3</td>
-                <td class='x'>failed</td>
-              </tr>
-              <tr class="ceafm">
-                <td>ceafm</td>
-                <td class='x'>failed</td>
-              </tr>
-              <tr class="ceafe">
-                <td>ceafe</td>
-                <td class='x'>failed</td>
-              </tr>
-              <tr class="blanc">
-                <td>blanc</td>
-                <td class='x'>failed</td>
-              </tr>
-              <tr class="lea">
-                <td>lea</td>
-                <td class='x'>failed</td>
-              </tr>
-              <tr class="conll">
-                <td>conll</td>
-                <td class='x'>failed</td>
-              </tr>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>passed</td></tr>
+              <tr class="b3"><td>b3</td><td class='x'>failed</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='x'>failed</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='x'>failed</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='x'>failed</td></tr>
+              <tr class="lea"><td>lea</td><td class='x'>failed</td></tr>
+              <tr class="conll"><td>conll</td><td class='x'>failed</td></tr>
             </table>
           </div>
         </section>
@@ -677,6 +667,221 @@
           </div>
         </section>
       </article>
+
+      <article class="biais system" id="BIAIS_2" val="1">
+        <h1>Biais 2 - Name #rename</h1>
+
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            biais, système
+          </div>
+        </section>
+
+        <section class="text_descr">
+            <h2>description</h2>
+            <div>
+              <p>
+                Une erreur se traduisant par une séparation d’’entité est-elle moins pénalisée <br>
+                qu’une erreur se traduisant par une mauvaise affectation de mention ?
+                Une erreur est analysée en termes de relation d’édition de lien
+                (insertion, délétion, substitution) (ici substitution vs. insertion). <br> 
+                Le score peut :<br>
+                a-	Dans tous les cas privilégier la séparation d’entité<br>
+                b-	Dans tous les cas privilégier la mauvaise affectation<br>
+                c-	aucun des deux<br>
+              </p>
+            </div>
+        </section>
+
+        <section class="test">
+          <h2>test</h2>
+          <div>
+            <p>
+              Le système séparant les deux entités obtient-il un meilleur score que celui
+              commettant « une » erreur
+            </p>
+            <code>  
+              GOLD	= 12345 67 <br>
+              SYS1 	= 1234 567 <br>
+              SYS2 	= 12 345 67 <br>
+              F(GOLD, SYS1) <┴? F(GOLD, SYS2) <br>
+            </code>
+          </div>
+        </section>
+      </article>
+
+      <article class="singleton data" id="SING_2" val="1">
+        <h1>singleton 2 - nb singleton</h1>
+
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            Singleton, donnée
+          </div>
+        </section>
+        
+        <section class="text_descr">
+          <h2>description</h2>
+          <div>
+            Le nombre de singletons (dans le gold ?) influe directement sur le score. <br>
+            le score peut : <br>
+            a-	augmenter avec le nombre de singletons <br>
+            b-	diminuer avec le nombre de singletons <br>
+            c-	être « indépendant » <br>
+          </div>
+        </section>
+
+        <section class="test">
+          <h2>test</h2>
+          <div>
+            On regarde l’évolution du score moyen pour un nombre de perturbation donné
+            ceci suivant le pourcentage de singleton dans le gold <br>
+            Pour un nombre de mention donné, on génère toutes les partitions que l’on regroupe
+            par nombre de singleton. Pour chaque partition on regarde le score entre elle une
+            variation de celle-ci à n variation près (déplacement) <br>
+            ex : <br>
+            pour  1 2 3 4 <br>
+            on génère toutes partitions possible 1 2 3 4, 1 2 34, 1 23 4…. que l’on regroupe
+            par pourcentage p de singleton <br>
+            pour chacune des partitions on calcul le score moyen de la métrique en apportant
+            n variation (déplacement) la même avec les entités (sans singleton)
+          </div>
+        </section>
+
+        <section class="citations">
+          <h2>citations</h2>
+          <div>
+            <p>
+              [B3] presents a drawback in that scores squeeze up too high due to singletons:
+              when many singletons are present, scores rapidly approach 1	00%.
+            </p>
+            <p>[CEAF_m] suffers from the singleton problem just as B3 does</p>
+            <p>
+              RECASENS ET HOVY, BLANC: IMPLEMENTING THE RAND INDEX FOR COREFERENCE EVALUATION,
+              2011
+            </p>
+          </div>
+        </section>
+      </article>
+
+      <article class="weight system" id="WEIGHT_1" val="1">
+        <h1>Pondération 1 - les entités ont toute un poids égal sur le score</h1>
+
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            Pondération, système
+          </div>
+        </section>
+
+        <section class="text_descr">
+          <h2>description</h2>
+          <div>
+            Le score est calculé par un agrégat par entité où toutes les entités ont le même poids
+          </div>
+        </section>
+
+        <section class="test">
+          <h2>test</h2>
+          <div>
+            </p>
+            Les deux gold / système avec autant d’entités parfaitement résolus et d’entité mal
+              résolus obtiennent-t-ils le même score
+            </p>
+            <code>
+              GOLD1 = 12 34 56 <br>
+              SYS1	= 31 24 56 <br>
+              GOLD2 = 12 34 567890AZERTYUIOP <br>
+              SYS2	= 31 24 567890AZERTYUIOP <br>
+              Score(GOLD1, SYS1) = Score(GOLD2, SYS2) <br>
+            </code>
+          </div>
+        </section>
+
+        <section class="citations">
+          <h2>citations</h2>
+          <div>
+            <p>
+              [for CEAF_m] all entities are weighted equally, irrespective of the number of
+              mentions they contain (Stoyanov et al. 2009)
+            </p>
+            <p>
+              RECASENS ET HOVY, BLANC: IMPLEMENTING THE RAND INDEX FOR COREFERENCE EVALUATION, 2011
+            </p>
+
+            <p>
+              Another problem with CEAFe, mentioned by Stoyanov et al. (2009), is that it weights
+              entities equally regardless of their sizes
+            </p>
+            <p>
+              MOOSAVI ET STRUBE, WHICH COREFERENCE EVALUATION METRIC DO YOU TRUST? A PROPOSAL FOR A
+              LINK-BASED ENTITY AWARE METRIC, 2016 (LEA)
+            </p>
+            <div class="remarque">
+              Stoyanov parlait de CEAF_e, CEAF_m ou les deux ? pourquoi Mossavi et strube
+              précise CEAFe ? à vérif.
+            </div>
+          </div>
+        </section>
+
+      </article>
+
+      <article class="weight system" id="WEIGHT_2" val="1">
+        <h1>
+          Pondération 2 - l’impact d’une erreur est le même quel que soit la taille d’une entité
+        </h1>
+
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            Pondération, système
+          </div>
+        </section>
+
+        <section class="text_descr">
+          <h2>description</h2>
+          <div>
+            Une erreur affecte de la même manière le score indépendamment de la taille de
+            l’entité dans laquelle elle se trouve
+          </div>
+        </section>
+
+        <section class="test">
+          <h2>test</h2>
+          <div>
+            <code>
+              gold = [{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13}, {14, 15, 16}] <br>
+              sys1 = [{1, 2, 3, 4, 6}, {5, 7, 8, 9, 10}, {11, 12, 13}, {14, 15, 16}] <br>
+              sys2 = [{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 14}, {13, 15, 16}] <br>
+              score(gold1, sys1) = score(gold2, sys2) 
+            </code>
+          </div>
+        </section>
+      </article>
+
+      <article class="TRIVIA system" id="TRIVIA_1" val="1">
+        <h1>
+          TRIVIA 1 - Le score peut atteindre 0 quel que soit le GOLD
+        </h1>
+
+        <section class="types">
+          <h2>type</h2>
+          <div>
+            Trivia, système
+          </div>
+        </section>
+
+        <section class="text_descr">
+          <h2>description</h2>
+          <div>
+            Le score peut atteindre 0 quel que soit le GOLD
+          </div>
+        </section>
+
+      </article>
+
+      
     </main>
   </body>
 </html>
