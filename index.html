@@ -20,18 +20,19 @@
         elements_affected = document.getElementsByClassName(button_pressed.id)
         if (classes.contains('active')){
           classes.remove('active')
-          display = true
+          display = "none"
           mod = -1
         }
         else{
           classes.add('active')
-          display = false
+          display = ""
           mod = 1
         }
         for (element of elements_affected){
           val = element.getAttribute('VAL')
           if (val === null){
-            element.hidden = display
+            console.log(element.hidden)
+            element.style.display = display
           }
           else{
             element.setAttribute('VAL', parseInt(val) + mod)
@@ -43,27 +44,10 @@
   </head>
   <body>
     <header>
-      <h1>Sont affiché les éléments dont les parent sont affichés
-        et dont au moins un attribut d'affichage est vert</h1>
+      <h1>Ne sont affiché que les éléments dont les parent sont affichés
+        et dont au moins un attribut d'affichage est vert.</h1>
     </header>
     <aside>
-      <ul>
-        <h3>Scores</h3>
-        <li><input class="button active" id="muc" type="button" 
-          value="MUC" onclick="func(this)"></li>
-        <li><input class="button active" id="b3" type="button" 
-          value="B3" onclick="func(this)"></li>
-        <li><input class="button active" id="ceafm" type="button" 
-          value="CEAF_m" onclick="func(this)"></li>
-        <li><input class="button active" id="ceafe" type="button" 
-          value="CEAF_e" onclick="func(this)"></li>
-        <li><input class="button active" id="blanc" type="button" 
-          value="BLANC" onclick="func(this)"></li>
-        <li><input class="button active" id="lea" type="button" 
-          value="LEA" onclick="func(this)"></li>
-        <li><input class="button active" id="conll" type="button" 
-          value="CONLL" onclick="func(this)"></li>
-      </ul>
       <ul>
         <h3>Catégories</h3>
         <li><input class="button active" id="metric" type="button" 
@@ -83,6 +67,23 @@
           value="data" onclick="func(this)"></li>
       </ul>
       <ul>
+        <h3>Scores</h3>
+        <li><input class="button active" id="muc" type="button" 
+          value="MUC" onclick="func(this)"></li>
+        <li><input class="button active" id="b3" type="button" 
+          value="B3" onclick="func(this)"></li>
+        <li><input class="button active" id="ceafm" type="button" 
+          value="CEAF_m" onclick="func(this)"></li>
+        <li><input class="button active" id="ceafe" type="button" 
+          value="CEAF_e" onclick="func(this)"></li>
+        <li><input class="button active" id="blanc" type="button" 
+          value="BLANC" onclick="func(this)"></li>
+        <li><input class="button active" id="lea" type="button" 
+          value="LEA" onclick="func(this)"></li>
+        <li><input class="button active" id="conll" type="button" 
+          value="CONLL" onclick="func(this)"></li>
+      </ul>
+      <ul>
         <h3>Descripteurs</h3>
         <li><input class="button active" id="types" type="button" 
           value="types" onclick="func(this)"></li>
@@ -90,6 +91,8 @@
           value="description textuel" onclick="func(this)"></li>
         <li><input class="button active" id="form_desc" type="button" 
           value="description formel" onclick="func(this)"></li>
+        <li><input class="button active" id="reported" type="button" 
+          value="reporté pour" onclick="func(this)"></li>
         <li><input class="button active" id="citations" type="button" 
           value="citations" onclick="func(this)"></li>
         <li><input class="button active" id="test" type="button" 
@@ -118,6 +121,22 @@
           <h2>description formelle</h2>
           <div>$s(a, b) = s(b, a)$</div>
         </section>
+
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>-</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>-</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>-</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
+          </div>
+        </section>
         
         <section class="test">
           <h2>test</h2>
@@ -126,14 +145,18 @@
 
         <section class="res">
           <h2>résultats</h2>
+
           <div>
-            <div class="muc"> MUC passed</div>
-            <div class="b3"> b3 passed</div>
-            <div class="ceafm"> ceafm passed</div>
-            <div class="ceafe"> ceafe passed</div>
-            <div class="blanc"> blanc failed</div>
-            <div class="lea"> lea passed</div>
-            <div class="conll"> conll passed</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>passed</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>passed</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>passed</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>passed</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='x'>failed</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>passed</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>passed</td></tr>
+            </table>
           </div>
         </section>
       </article>
@@ -157,6 +180,22 @@
           <h2>description formelle</h2>
           <div>$s(a,a) \geq 0$</div>
         </section>
+
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>-</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>-</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>-</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
+          </div>
+        </section>
         
         <section class="test">
           <h2>test</h2>
@@ -166,13 +205,16 @@
         <section class="res">
           <h2>résultats</h2>
           <div>
-            <div class="muc"> MUC passed</div>
-            <div class="b3"> b3 passed</div>
-            <div class="ceafm"> ceafm passed</div>
-            <div class="ceafe"> ceafe passed</div>
-            <div class="blanc"> blanc passed</div>
-            <div class="lea"> lea passed</div>
-            <div class="conll"> conll passed</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>passed</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>passed</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>passed</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>passed</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>passed</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>passed</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>passed</td></tr>
+            </table>
           </div>
         </section>
       </article>
@@ -199,6 +241,23 @@
           <div>$s(a, b) \leq s(a, a)$</div>
         </section>
 
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <div>TODO</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>-</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>-</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>-</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
+          </div>
+        </section>
+
         <section class="test">
           <h2>test</h2>
           <div>Toute les combinaisons de partitions d'élement quelconque de taille $\leq 6$</div>
@@ -207,13 +266,16 @@
         <section class="res">
           <h2>résultats</h2>
           <div>
-            <div class="muc"> MUC passed</div>
-            <div class="b3"> b3 passed</div>
-            <div class="ceafm"> ceafm passed</div>
-            <div class="ceafe"> ceafe passed</div>
-            <div class="blanc"> blanc passed</div>
-            <div class="lea"> lea passed</div>
-            <div class="conll"> conll passed</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>passed</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>passed</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>passed</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>passed</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>passed</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>passed</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>passed</td></tr>
+            </table>
           </div>
         </section>
       </article>
@@ -238,6 +300,23 @@
           <div>$s(a,b) + s(b, c) \leq s(b, b) + s(a, c)$</div>
         </section>
         
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <div>TODO</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>-</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>-</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>-</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
+          </div>
+        </section>
+
         <section class="test">
           <h2>test</h2>
           <div>Toute les combinaisons de partitions d'élement quelconque de taille $\leq 5$</div>
@@ -246,13 +325,16 @@
         <section class="res">
           <h2>résultats</h2>
           <div>
-            <div class="muc"> MUC failed</div>
-            <div class="b3"> b3 failed</div>
-            <div class="ceafm"> ceafm passed</div>
-            <div class="ceafe"> ceafe failed</div>
-            <div class="blanc"> blanc failed</div>
-            <div class="lea"> lea failed</div>
-            <div class="conll"> conll failed</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='x'>failed</td></tr>
+              <tr class="b3"><td>b3</td><td class='x'>failed</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>passed</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='x'>failed</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='x'>failed</td></tr>
+              <tr class="lea"><td>lea</td><td class='x'>failed</td></tr>
+              <tr class="conll"><td>conll</td><td class='x'>failed</td></tr>
+            </table>
           </div>
         </section>
       </article>
@@ -280,6 +362,23 @@
           <div>$s(a, a) = s(b, b) = s(a, b) \Leftrightarrow a = b$</div>
         </section>
 
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <div>TODO</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>-</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>-</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>-</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
+          </div>
+        </section>
+
         <section class="test">
           <h2>test</h2>
           <div>Toute les combinaisons de partitions d'élement quelconque de taille $\leq 6$</div>
@@ -288,13 +387,16 @@
         <section class="res">
           <h2>résultats</h2>
           <div>
-            <div class="muc"> MUC passed</div>
-            <div class="b3"> b3 passed</div>
-            <div class="ceafm"> ceafm passed</div>
-            <div class="ceafe"> ceafe passed</div>
-            <div class="blanc"> blanc passed</div>
-            <div class="lea"> lea passed</div>
-            <div class="conll"> conll passed</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>passed</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>passed</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>passed</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>passed</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>passed</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>passed</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>passed</td></tr>
+            </table>
           </div>
         </section>
       </article>
@@ -319,6 +421,23 @@
           <div>$s(a, b) \leq 1$</div>
         </section>
 
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <div>TODO</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>-</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>-</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>-</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
+          </div>
+        </section>
+
         <section class="test">
           <h2>test</h2>
           <div>Toute les combinaisons de partitions d'élement quelconque de taille $\leq 6$</div>
@@ -327,13 +446,16 @@
         <section class="res">
           <h2>résultats</h2>
           <div>
-            <div class="muc"> MUC passed</div>
-            <div class="b3"> b3 passed</div>
-            <div class="ceafm"> ceafm passed</div>
-            <div class="ceafe"> ceafe passed</div>
-            <div class="blanc"> blanc passed</div>
-            <div class="lea"> lea passed</div>
-            <div class="conll"> conll passed</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>passed</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>passed</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>passed</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>passed</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>passed</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>passed</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>passed</td></tr>
+            </table>
           </div>
         </section>
       </article>
@@ -358,6 +480,23 @@
           <div>$s(a, a) = 1$</div>
         </section>
 
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <div>TODO</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>-</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>-</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>-</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
+          </div>
+        </section>
+
         <section class="test">
           <h2>test</h2>
           <div>Toute les combinaisons de partitions d'élement quelconque de taille $\leq 6$</div>
@@ -366,13 +505,16 @@
         <section class="res">
           <h2>résultats</h2>
           <div>
-            <div class="muc"> MUC failed</div>
-            <div class="b3"> b3 passed</div>
-            <div class="ceafm"> ceafm passed</div>
-            <div class="ceafe"> ceafe passed</div>
-            <div class="blanc"> blanc passed</div>
-            <div class="lea"> lea passed</div>
-            <div class="conll"> conll failed</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='x'>failed</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>passed</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>passed</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>passed</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>passed</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>passed</td></tr>
+              <tr class="conll"><td>conll</td><td class='x'>failed</td></tr>
+            </table>
           </div>
         </section>
       </article>
@@ -397,6 +539,23 @@
           <div>$s(a, n) \geq 0$</div>
         </section>
 
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <div>TODO</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>-</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>-</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>-</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
+          </div>
+        </section>
+
         <section class="test">
           <h2>test</h2>
           <div>Toute les combinaisons de partitions d'élement quelconque de taille $\leq 6$</div>
@@ -405,19 +564,22 @@
         <section class="res">
           <h2>résultats</h2>
           <div>
-            <div class="muc"> MUC passed</div>
-            <div class="b3"> b3 passed</div>
-            <div class="ceafm"> ceafm passed</div>
-            <div class="ceafe"> ceafe passed</div>
-            <div class="blanc"> blanc passed</div>
-            <div class="lea"> lea passed</div>
-            <div class="conll"> conll passed</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>passed</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>passed</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>passed</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>passed</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>passed</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>passed</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>passed</td></tr>
+            </table>
           </div>
         </section>
       </article>
 
       <article class="singleton system" id="SING_1" val="1">
-        <h1>Singleton 1 - NAME #rename</h1>
+        <h1>Singleton 1 - Le score distingue une correcte résolution de singleton d’une mauvaise</h1>
         
         <section class="types">
           <h2>type</h2>
@@ -440,7 +602,23 @@
           a-	Dans tous les cas distinguer une correcte résolution d’une mauvaise<br>
           b-	Ne jamais distinguer une correcte résolution d’une mauvaise<br>
           c-	Aucun des deux
+          </div>
+        </section>
 
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <div>TODO</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='x'>X</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>-</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>-</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
           </div>
         </section>
 
@@ -494,8 +672,8 @@
               <h3>a2</h3>
               <table>
                 <tr><th>Score</th><th>F</th><th>R</th><th>P</th></tr>
-                <tr class="muc"><td>MUC</td><td class='y'>failed</td><td class='x'>failed</td><td class='y'>failed</td></tr>
-                <tr class="b3"><td>b3</td><td class='y'>passed</td><td class='x'>passed</td><td class='y'>passed</td></tr>
+                <tr class="muc"><td>MUC</td><td class='x'>failed</td><td class='x'>failed</td><td class='x'>failed</td></tr>
+                <tr class="b3"><td>b3</td><td class='y'>passed</td><td class='x'>failed</td><td class='y'>passed</td></tr>
                 <tr class="ceafm"><td>ceafm</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
                 <tr class="ceafe"><td>ceafe</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
                 <tr class="blanc"><td>blanc</td><td class='y'>passed</td><td class='y'>passed</td><td class='y'>passed</td></tr>
@@ -565,7 +743,7 @@
       </article>
 
       <article class="biais system" id="BIAIS_1" val="1">
-        <h1>BIAIS 1 - NAME #rename</h1>
+        <h1>BIAIS 1 - le score privilégie la fusion de deux entités à une mauvaise affectation</h1>
 
         <section class="types">
           <h2>type</h2>
@@ -586,6 +764,23 @@
             a-	Dans tous les cas privilégier la fusion d’entité<br>
             b-	Dans tous les cas privilégier la mauvaise affectation<br>
             c-	aucun des deux
+          </div>
+        </section>
+
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <div>TODO</div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='z'>O</td></tr>
+              <tr class="b3"><td>b3</td><td class='x'>X</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>-</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
           </div>
         </section>
 
@@ -694,6 +889,22 @@
             </div>
         </section>
 
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>-</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>-</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>-</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
+          </div>
+        </section>
+
         <section class="test">
           <h2>test</h2>
           <div>
@@ -705,14 +916,30 @@
               GOLD	= 12345 67 <br>
               SYS1 	= 1234 567 <br>
               SYS2 	= 12 345 67 <br>
-              F(GOLD, SYS1) <┴? F(GOLD, SYS2) <br>
+              F(GOLD, SYS1) < F(GOLD, SYS2) <br>
             </code>
+          </div>
+        </section>
+
+        <section class="res">
+          <h2>resultats</h2>
+          <div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>passed</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>passed</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='x'>failed</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='x'>failed</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>passed</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>passed</td></tr>
+              <tr class="conll"><td>conll</td><td class='x'>failed</td></tr>
+            </table>
           </div>
         </section>
       </article>
 
       <article class="singleton data" id="SING_2" val="1">
-        <h1>singleton 2 - nb singleton</h1>
+        <h1>singleton 2 - influencé par la proportion de singleton</h1>
 
         <section class="types">
           <h2>type</h2>
@@ -729,6 +956,22 @@
             a-	augmenter avec le nombre de singletons <br>
             b-	diminuer avec le nombre de singletons <br>
             c-	être « indépendant » <br>
+          </div>
+        </section>
+
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>-</td></tr>
+              <tr class="b3"><td>b3</td><td class='z'>O</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='z'>O</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
           </div>
         </section>
 
@@ -782,6 +1025,22 @@
           </div>
         </section>
 
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>-</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>-</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='z'>O</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='z'>O</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
+          </div>
+        </section>
+
         <section class="test">
           <h2>test</h2>
           <div>
@@ -796,6 +1055,22 @@
               SYS2	= 31 24 567890AZERTYUIOP <br>
               Score(GOLD1, SYS1) = Score(GOLD2, SYS2) <br>
             </code>
+          </div>
+        </section>
+
+        <section class="res">
+          <h2>resultats</h2>
+          <div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='x'>failed</td></tr>
+              <tr class="b3"><td>b3</td><td class='x'>failed</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='x'>failed</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>passed</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='x'>failed</td></tr>
+              <tr class="lea"><td>lea</td><td class='x'>failed</td></tr>
+              <tr class="conll"><td>conll</td><td class='x'>failed</td></tr>
+            </table>
           </div>
         </section>
 
@@ -829,7 +1104,7 @@
 
       <article class="weight system" id="WEIGHT_2" val="1">
         <h1>
-          Pondération 2 - l’impact d’une erreur est le même quel que soit la taille d’une entité
+          Pondération 2 - l’impact d’une erreur est le même quel que soit la taille de l'entité
         </h1>
 
         <section class="types">
@@ -847,6 +1122,22 @@
           </div>
         </section>
 
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>-</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>-</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>-</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
+          </div>
+        </section>
+
         <section class="test">
           <h2>test</h2>
           <div>
@@ -856,6 +1147,22 @@
               sys2 = [{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 14}, {13, 15, 16}] <br>
               score(gold1, sys1) = score(gold2, sys2) 
             </code>
+          </div>
+        </section>
+
+        <section class="res">
+          <h2>resultats</h2>
+          <div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>passed</td></tr>
+              <tr class="b3"><td>b3</td><td class='x'>failed</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='x'>failed</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='x'>failed</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='x'>failed</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>lea</td></tr>
+              <tr class="conll"><td>conll</td><td class='x'>failed</td></tr>
+            </table>
           </div>
         </section>
       </article>
@@ -876,6 +1183,22 @@
           <h2>description</h2>
           <div>
             Le score peut atteindre 0 quel que soit le GOLD
+          </div>
+        </section>
+
+        <section class="reported">
+          <h2>Reporté pour</h2>
+          <div>
+            <table>
+              <tr><th>Score</th><th>F</th></tr>
+              <tr class="muc"><td>MUC</td><td class='y'>-</td></tr>
+              <tr class="b3"><td>b3</td><td class='y'>-</td></tr>
+              <tr class="ceafm"><td>ceafm</td><td class='y'>-</td></tr>
+              <tr class="ceafe"><td>ceafe</td><td class='y'>-</td></tr>
+              <tr class="blanc"><td>blanc</td><td class='y'>-</td></tr>
+              <tr class="lea"><td>lea</td><td class='y'>-</td></tr>
+              <tr class="conll"><td>conll</td><td class='y'>-</td></tr>
+            </table>
           </div>
         </section>
 

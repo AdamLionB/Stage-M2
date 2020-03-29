@@ -12,6 +12,8 @@ header > h1{
 	color: white;
 }
 
+/* ------------------------------------------ aside ----------------------------------------------*/
+
 aside{
 	float: left;
 	position: sticky;
@@ -56,6 +58,8 @@ aside > ul > li *:hover:not(.active) {
 aside > ul > li *.active:hover {
 	background-color: rgb(255,204,204); 
 }
+
+/* ------------------------------------------- main ----------------------------------------------*/
 
 main {
 	margin-left:20%;
@@ -106,27 +110,33 @@ div > div{
 	width: 100%;
 }
 
+.remarque{
+	color: green;
+	font-weight: bold;
+}
+
+/* ------------------------------------------ table ----------------------------------------------*/
+
+
 table {
 	font-family: arial, sans-serif;
 	border-collapse: collapse;
 	width: 100%;
-	display: block;
 }
   
-
+tr { display: block; float: left; }
 
 td, th {
 	border: 1px solid #dddddd;
 	text-align: left;
 	padding: 8px;
-	display: inline-flexbox;
+	display: block;
+}
+
+td.z {
+	background-color: rgb(204, 221, 170);
 }
 
 td.x {
 	background-color: rgb(255,204,204);
-}
-
-.remarque{
-	color: green;
-	font-weight: bold;
 }
