@@ -435,7 +435,7 @@ ALL_TESTS = {
     a3_test: tmp_class(a3_test, 'a3', systematic=exp_setup(True, 1, 1, 7)),
     b1_test: tmp_class(b1_test, 'b1', systematic=exp_setup(True, 1, 1, 7)),
     b2_test: tmp_class(b2_test, 'b2', systematic=exp_setup(True, 1, 1, 7)),
-    c_test: tmp_class(lambda x: c_test(x, modifications=4), 'c',
+    c_test: tmp_class(lambda x: c_test(x, modifications=1), 'c',
                       agg=(series_micro_acc1, series_micro_acc2), systematic=exp_setup(True, 30, 9, 10)),
     d1_test: tmp_class(d1_test, 'd1', systematic=exp_setup(True, 1, 1, 7)),
     d2_test: tmp_class(d2_test, 'd2', systematic=exp_setup(True, 1, 1, 7)),

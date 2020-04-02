@@ -1,6 +1,6 @@
 # std libs
 from typing import TypeVar, List, Callable, Set, Iterator
-from random import shuffle, randint, random
+from random import shuffle, randint, random, choice
 from math import floor, ceil, factorial, exp, isclose
 from functools import reduce
 from collections import defaultdict
@@ -128,25 +128,14 @@ def introduce_randomness(partition: Partition):
     """
     randomize the entity of a random mention in the partition
     """
-    size = reduce(lambda x, y: x + len(y), partition, 0)
-    old_pos = randint(0, size - 1)
+    res = [{*e} for e in partition]
+    old_pos = randint(0, len(res)-1)
+    part = res[old_pos]
+    elem = choice([*part])
+    res[old_pos] -= {elem}
+    if len(part) == 0:
+        res.remove(part)
 
-    cursor = 0
-    elem = None
-    res = []
-    flag= False
-    for cluster in partition:
-        if cursor <= old_pos < cursor + len(cluster) and not flag:
-            for c, e in enumerate(cluster, cursor):
-                if old_pos == c:
-                    elem = e
-                    break
-            new_cluster = cluster - {elem}
-            if new_cluster: res.append(cluster - {elem})
-            flag = True
-        else:
-            res.append(cluster.copy())
-            cursor += len(cluster)
     new_pos = randint(0, len(res))
     if new_pos == len(res):
         res.append({elem})
