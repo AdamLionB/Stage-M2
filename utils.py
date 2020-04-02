@@ -3,7 +3,7 @@ from __future__ import annotations
 # std libs
 from typing import Tuple, Dict, Iterator, Union, Any, Callable, TypeVar, List, Generic
 from enum import Enum, auto
-from math import isclose
+from math import isclose, ceil, factorial, exp
 from time import time
 from functools import reduce, partial
 from itertools import zip_longest
@@ -82,7 +82,7 @@ class ScoreHolder(Generic[T]):
         >>> ScoreHolder({'a': (1.0,), 'c': (1.0, 2.0)}) + ScoreHolder({'a': (3.0,), 'b': (4.0, 5.0)})
         isn't
         """
-        return self.apply(lambda x, y : x + y, other)
+        return self.apply(lambda x, y: x + y, other)
 
     def __sub__(self, other: ScoreHolder[T]) -> ScoreHolder[T]:
         """
@@ -112,7 +112,7 @@ class ScoreHolder(Generic[T]):
         Outputs the result of the multiplication of a ScoreHolder by a scalar.
         Each value of the ScoreHolder is multiplied by the scalar.
         """
-        return self.apply_to_values(lambda x : x * scalar)
+        return self.apply_to_values(lambda x: x * scalar)
 
     def __truediv__(self, scalar: float) -> ScoreHolder[T]:
         """
@@ -184,6 +184,12 @@ def to_tuple(e: Union[T, Tuple[T]]) -> Tuple[T]:
     return e,
 
 
+def to_tuple_last(e: Union[T, Tuple[T]]) -> Tuple[T]:
+    if type(e) == tuple:
+        return e[-1],
+    return e,
+
+
 def evaluates(gold: Partition, sys: Partition) -> ScoreHolder[float]:
     """
     Computes metrics scores for a (gold, sys) and outputs it as a Scores
@@ -196,6 +202,18 @@ def evaluates(gold: Partition, sys: Partition) -> ScoreHolder[float]:
     if len(gold) == len(sys):
         for name, metric in SK_METRICS.items():
             res[name] = to_tuple(metric(gold, sys))
+    return ScoreHolder(res)
+
+
+def evaluates_main(gold: Partition, sys: Partition) -> ScoreHolder[float]:
+    res = {}
+    for name, metric in METRICS.items():
+        res[name] = to_tuple_last(metric(gold, sys))
+    gold = partition_to_sklearn_format(gold)
+    sys = partition_to_sklearn_format(sys)
+    if len(gold) == len(sys):
+        for name, metric in SK_METRICS.items():
+            res[name] = to_tuple_last(metric(gold, sys))
     return ScoreHolder(res)
 
 
@@ -233,13 +251,14 @@ def list_and_setup(x: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[
         return [], x[1]
 
 
-def list_and_reducer(x: Tuple[List, ScoreHolder[bool]], y: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[bool]]:
+def list_and_reducer(x: Tuple[List, ScoreHolder[bool]], y: Tuple[Any, ScoreHolder[bool]]) -> Tuple[
+    List, ScoreHolder[bool]]:
     res = x[1] & y[1]
     if reduce(
             lambda a, b: a | b,
-            ScoreHolder.apply(x[1],lambda a, b: (not b) and a, res).for_important_values()
+            ScoreHolder.apply(x[1], lambda a, b: (not b) and a, res).for_important_values()
     ):
-        return x[0]+[y[0]], res
+        return x[0] + [y[0]], res
     return x[0], res
 
 
@@ -250,13 +269,14 @@ def list_or_setup(x: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[b
         return [], x[1]
 
 
-def list_or_reducer(x: Tuple[List, ScoreHolder[bool]], y: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[bool]]:
+def list_or_reducer(x: Tuple[List, ScoreHolder[bool]], y: Tuple[Any, ScoreHolder[bool]]) -> Tuple[
+    List, ScoreHolder[bool]]:
     res = x[1] | y[1]
     if reduce(
             lambda a, b: a | b,
             ScoreHolder.apply(x[1], lambda a, b: (not a) and b, res).for_important_values()
     ):
-        return x[0]+[y[0]], res
+        return x[0] + [y[0]], res
     return x[0], res
 
 
@@ -283,23 +303,27 @@ def macro_avg_acc(scoress: Iterator[Tuple[Any, ScoreHolder[float]]]) -> ScoreHol
         scoress
     )
 
-def macro_avg_std_acc1(scoress:Iterator[Tuple[Any, ScoreHolder[float]]]) -> Tuple[ScoreHolder[float], ScoreHolder[float]]:
+
+def macro_avg_std_acc1(scoress: Iterator[Tuple[Any, ScoreHolder[float]]]) -> Tuple[
+    ScoreHolder[float], ScoreHolder[float]]:
     return acc(
-        lambda x: (1, x[1], x[1]**2),
-        lambda x, y: (x[0]+1, x[1]+y[1], x[2]+(y[1]**2)),
-        lambda x : (x[1]/ x[0], ((x[2] - (x[1]**2) / x[0]) / x[0]) ** (1/2)),
+        lambda x: (1, x[1], x[1] ** 2),
+        lambda x, y: (x[0] + 1, x[1] + y[1], x[2] + (y[1] ** 2)),
+        lambda x: (x[1] / x[0], ((x[2] - (x[1] ** 2) / x[0]) / x[0]) ** (1 / 2)),
         scoress
     )
+
 
 def macro_avg_std_acc2(
         scoress: Iterator[Tuple[Any, Tuple[ScoreHolder[float], ScoreHolder[float]]]]
 ) -> Tuple[ScoreHolder[float], ScoreHolder[float]]:
     return acc(
         lambda x: (1, x[1][0], x[1][1]),
-        lambda x, y: (x[0]+1, x[1]+y[1][0], x[2]+y[1][1]),
-        lambda x : (x[1] / x[0], x[2] / x[0]),
+        lambda x, y: (x[0] + 1, x[1] + y[1][0], x[2] + y[1][1]),
+        lambda x: (x[1] / x[0], x[2] / x[0]),
         scoress
     )
+
 
 def micro_avg_acc1(scoress: Iterator[Tuple[Any, ScoreHolder[float]]]) -> Tuple[int, ScoreHolder[float]]:
     return acc(
@@ -309,19 +333,21 @@ def micro_avg_acc1(scoress: Iterator[Tuple[Any, ScoreHolder[float]]]) -> Tuple[i
         scoress
     )
 
+
 def micro_avg_acc2(scoress: Iterator[Tuple[Any, Tuple[int, ScoreHolder[float]]]]) -> ScoreHolder:
     return acc(
         lambda x: x[1],
-        lambda x, y: (x[0]+y[1][0], x[1]+y[1][1]),
+        lambda x, y: (x[0] + y[1][0], x[1] + y[1][1]),
         lambda x: x[1] / x[0],
         scoress
     )
 
 
-def micro_avg_std_acc1(scoress:Iterator[Tuple[Any, ScoreHolder[float]]]) -> Tuple[int, ScoreHolder[float], ScoreHolder[float]]:
+def micro_avg_std_acc1(scoress: Iterator[Tuple[Any, ScoreHolder[float]]]
+                       ) -> Tuple[int, ScoreHolder[float], ScoreHolder[float]]:
     return acc(
-        lambda x: (1, x[1], x[1]**2),
-        lambda x, y: (x[0]+1, x[1]+y[1], x[2]+(y[1]**2)),
+        lambda x: (1, x[1], x[1] ** 2),
+        lambda x, y: (x[0] + 1, x[1] + y[1], x[2] + (y[1] ** 2)),
         lambda x: x,
         scoress
     )
@@ -330,10 +356,11 @@ def micro_avg_std_acc1(scoress:Iterator[Tuple[Any, ScoreHolder[float]]]) -> Tupl
 def micro_avg_std_acc2(scoress: Iterator[Tuple[Any, Tuple[int, ScoreHolder[float], ScoreHolder[float]]]]):
     return acc(
         lambda x: x[1],
-        lambda x, y: (x[0]+y[1][0], x[1]+y[1][1], x[2]+(y[1][2])),
-        lambda x: (x[1]/ x[0], ((x[2] - (x[1]**2) / x[0]) / x[0]) ** (1/2)),
+        lambda x, y: (x[0] + y[1][0], x[1] + y[1][1], x[2] + (y[1][2])),
+        lambda x: (x[1] / x[0], ((x[2] - (x[1] ** 2) / x[0]) / x[0]) ** (1 / 2)),
         scoress
     )
+
 
 def list_and_acc1(scoress: Iterator[Tuple[Any, ScoreHolder[bool]]]) -> Tuple[list, ScoreHolder[bool]]:
     """
@@ -361,7 +388,66 @@ def list_or_acc1(scoress: Iterator[Tuple[Any, ScoreHolder[bool]]]) -> Tuple[list
 def list_or_acc2(scoress: Iterator[Tuple[list, ScoreHolder[bool]]]) -> Tuple[list, ScoreHolder[bool]]:
     return acc(
         lambda x: ([x[0], x[1][0]], x[1][1]),
-        lambda x, y: (x[0]+[(y[0], y[1][0])], x[1] | y[1][1]),
+        lambda x, y: (x[0] + [(y[0], y[1][0])], x[1] | y[1][1]),
         identity,
+        scoress
+    )
+
+
+def series_setup(
+        x: Tuple[Tuple[Partition, Partition], ScoreHolder[float]]
+) -> Dict[int, Tuple[int, ScoreHolder[float], ScoreHolder[float]]]:
+    nb_sing = sum(1 for i in x[0][0] if len(i) == 1)
+    key = int(100 * nb_sing / len(x[0][0]))
+    dic = {key: (1, x[1], x[1] ** 2)}
+    return dic
+
+
+def series_reducer(
+        dic: Dict[int, Tuple[int, ScoreHolder[float], ScoreHolder[float]]],
+        x: Tuple[Tuple[Partition, Partition], ScoreHolder[float]]
+) -> Dict[int, Tuple[int, ScoreHolder[float], ScoreHolder[float]]]:
+    nb_sing = sum(1 for i in x[0][0] if len(i) == 1)
+    key = int(100 * nb_sing / len(x[0][0]))
+    old_val = dic.get(key)
+    if old_val is not None:
+        dic[key] = old_val[0] + 1, old_val[1] + x[1], old_val[2] + x[1] ** 2
+    else:
+        dic[key] = 1, x[1], x[1] ** 2
+    return dic
+
+
+def series_micro_acc1(
+        scoress: Iterator[Tuple[Tuple[Partition, Partition], ScoreHolder[float]]]
+) -> Dict[int, Tuple[int, ScoreHolder[float], ScoreHolder[float]]]:
+    return acc(
+        series_setup,
+        series_reducer,
+        identity,
+        scoress
+    )
+
+
+def series_reducer2(
+        dic: Dict[int, Tuple[int, ScoreHolder[float], ScoreHolder[float]]],
+        x: Tuple[Any, Dict[int, Tuple[int, ScoreHolder[float], ScoreHolder[float]]]]
+) -> Dict[int, Tuple[int, ScoreHolder[float], ScoreHolder[float]]]:
+    x = x[1]
+    for k, v in x.items():
+        old_val = dic.get(k)
+        if old_val is not None:
+            dic[k] = old_val[0] + v[0], old_val[1] + v[1], old_val[2] + v[2]
+        else:
+            dic[k] = v
+    return dic
+
+
+def series_micro_acc2(
+        scoress: Iterator[Tuple[int, Dict[int, ScoreHolder[float]]]]
+) -> Dict[int, Tuple[ScoreHolder[float], ScoreHolder[float]]]:
+    return acc(
+        second,
+        series_reducer2,
+        lambda dic: {k: (v[1] / v[0], ((v[2] - (v[1] ** 2) / v[0]) / v[0]) ** (1 / 2)) for k, v in dic.items()},
         scoress
     )

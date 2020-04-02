@@ -8,15 +8,20 @@ from itertools import product
 from math import isclose
 from functools import partial, reduce
 
+# other lib
+import numpy as np
+import matplotlib.pyplot as plt
+
 # scorch lib
 from scorch.main import clusters_from_json
 
 # this lib
 from partition_utils import Partition, singleton_partition, entity_partition, beta_partition, get_mentions, \
-    all_partition_of_size, is_regular, contains_singleton
-from utils import ScoreHolder, evaluates, to_tuple, simple_and_acc, simple_or_acc,\
+    all_partition_of_size, is_regular, contains_singleton, introduce_randomness
+from utils import ScoreHolder, evaluates, evaluates_main, to_tuple, simple_and_acc, simple_or_acc,\
     list_and_acc1, list_and_acc2, list_or_acc1, list_or_acc2, micro_avg_acc1, micro_avg_acc2, \
-    micro_avg_std_acc1, micro_avg_std_acc2, macro_avg_acc, macro_avg_std_acc1, macro_avg_std_acc2
+    micro_avg_std_acc1, micro_avg_std_acc2, macro_avg_acc, macro_avg_std_acc1, macro_avg_std_acc2, series_micro_acc1, \
+    series_micro_acc2
 
 T = TypeVar('T')
 U = TypeVar('U')
@@ -68,6 +73,12 @@ def b2_test() -> ScoreHolder[bool]:
     sys2 = [{1, 2}, {3, 4, 5}, {6, 7}]
     return ScoreHolder.apply(evaluates(gold, sys1), intern, evaluates(gold, sys2))
 
+
+def c_test(gold: Partition, *, modifications: int = 1) -> ScoreHolder[float]:
+    sys = gold
+    for i in range(modifications):
+        sys= introduce_randomness(sys)
+    return evaluates_main(gold, sys)
 
 def d1_test() -> ScoreHolder[bool]:
     def intern(x: float, y: float) -> bool:
@@ -249,6 +260,8 @@ def randomized_test(
         if res is not None:
             yield partitions, res
 
+
+
 def fixed_gold_randomized_test(
         test_func: Callable[[Partition, ...], Optional[ScoreHolder[T]]],
         it: Iterator[Partition],
@@ -285,18 +298,44 @@ def ancor_gold_randomized_test(
                                       repetitions=repetitions, beta_param=beta_param)
 
 
-def all_partitions_test(
-        test_func: Callable[[Partition], Optional[ScoreHolder[T]]],
-        i: int = 1,
-        filtre_func: Callable[[Partition], bool] = lambda x : True
-) -> Iterator[Tuple[Partition], ScoreHolder[T]]:
-    n_args = len(signature(test_func).parameters)
-    for partitions in product(filter(filtre_func,all_partition_of_size(i)), repeat=n_args):
-        res = test_func(*partitions)
-        if res is not None:
+def variation_gold_test(
+        test_func: Callable[[Partition, ...], Optional[ScoreHolder[T]]],
+        it: Iterator[Partition],
+        repetitions: int = 100
+):
+    n_agrs = len(signature(test_func).parameters) - 1
+    for gold in it:
+        m = get_mentions(gold)
+        # repeats the test 'repetitions' times
+        for _ in range(repetitions):
+            partitions = [introduce_randomness(gold) for n in range(n_agrs)]
+            res = test_func(gold, *partitions)
             yield partitions, res
 
 
+
+def all_partitions_test(
+        test_func: Callable[[Partition], Optional[ScoreHolder[T]]],
+        i: int = 1,
+        filtre_func: Callable[[Partition], bool] = lambda x : True,
+        repetitions: int = 1
+) -> Iterator[Tuple[Partition], ScoreHolder[T]]:
+    n_args = len(signature(test_func).parameters)
+    for partitions in product(filter(filtre_func,all_partition_of_size(i)), repeat=n_args):
+        for _ in range(repetitions):
+            res = test_func(*partitions)
+            if res is not None:
+                yield partitions, res
+
+
+from dataclasses import dataclass
+
+@dataclass
+class exp_setup:
+    active: bool = False
+    repetitions: int = 1
+    start: int = 1
+    end: int = 1
 class tmp_class:
     distributions = [partial(beta_partition, a=1, b=1)]#, partial(beta_partition, a=1, b=100)]
 
@@ -304,76 +343,58 @@ class tmp_class:
             self,
             test_func: Callable[[Partition, ...], ScoreHolder[T]],
             descr_str: str,
-            on_corpus: bool = False,
-            randomize: bool = False,
-            repetitions: int = 100,
-            std: bool = False,
-            start: int = 1,
-            end: int = 7,
-            agg : Callable[[Iterator[T]], U]= simple_and_acc,
-            agg2 : Callable[[Iterator[U]], V] = simple_and_acc
+            agg: Tuple[Callable[[Iterator[T]], U], Callable[[Iterator[U]], V]] = (simple_and_acc, simple_and_acc),
+            *,
+            systematic: exp_setup = exp_setup(False, 1, 6, 7),
+            on_corpus: exp_setup = exp_setup(False, 1, 6, 7),
+            randomize: exp_setup = exp_setup(False, 1, 6, 7),
+            variation: exp_setup = exp_setup(False, 30, 6, 7)
     ):
         self.test_func = test_func
         self.n_args = len(signature(self.test_func).parameters)
         self.descr_str = descr_str
         self.on_corpus = on_corpus
+        self.systematic = systematic
         self.randomize = randomize
-        self.repetitions = repetitions
-        self.std = std
-        self.start = start
-        self.end = end
+        self.variation = variation
         self.agg = agg
-        self.agg2 = agg2
-
-    #TODO std acc in new style
-    @staticmethod
-    def avg_std(scoress: Iterator[ScoreHolder]) -> Tuple[ScoreHolder, ScoreHolder]:
-        """
-        Outputs the average and standard deviation ScoreHolder of an iterator.
-        All of the ScoreHolder in the iterator have to have the same strucutre,
-        meanings the same keys, in the same order and tuples of similar size for each key
-        """
-        regular_sum = next(scoress)
-        squared_sum = regular_sum ** 2
-        count = 1
-        for scores in scoress:
-            regular_sum += scores
-            squared_sum += scores ** 2
-            count += 1
-        return (regular_sum / count,
-                ((squared_sum - (regular_sum ** 2) / count) / count) ** (1 / 2))
 
     def intern1(self) -> Iterator[Tuple[int, T]]:
-        for i in range(self.start, self.end):
-            try :
-                yield i, self.agg(all_partitions_test(self.test_func, i=i))
-            except:
-                pass
+        for i in range(self.systematic.start, self.systematic.end):
+            yield i, self.agg[0](all_partitions_test(self.test_func, i=i, repetitions=self.systematic.repetitions))
+
 
     def intern2(self) -> Iterator[Tuple[int, T]]:
         for dists in product(tmp_class.distributions, repeat=self.n_args):
-            yield dists, self.agg(randomized_test(self.test_func, partition_generators=dists, repetitions=self.repetitions))
+            yield dists, self.agg[0](randomized_test(self.test_func, partition_generators=dists, repetitions=self.randomize.repetitions))
 
     def intern3(self) -> Iterator[Tuple[int, T]]:
         for dists in product(tmp_class.distributions, repeat=self.n_args-1):
-            yield dists, self.agg(
+            yield dists, self.agg[0](
                 ancor_gold_randomized_test(
                     self.test_func,
                     partition_generators=dists,
-                    repetitions=self.repetitions if self.n_args != 1 else 1
+                    repetitions=self.on_corpus.repetitions
                 )
             )
 
+    # def intern4(self) -> Iterator[Tuple[int, T]]:
+    #     for i in range(self.start, self.end):
+    #         yield i, self.agg(variation_gold_test(self.test_func, it=all_partition_of_size(i), repetitions=self.repetitions))
+
     def f(self) -> Iterator[T]:
         if self.n_args != 0:
-            try :
-                yield self.agg2(self.intern1())
-            except StopIteration:
-                pass
-            if self.on_corpus:
-                yield self.agg2(self.intern3())
-        if self.randomize:
-            yield self.agg2(self.intern2())
+            if self.systematic.active:
+                try :
+                    yield self.agg[1](self.intern1())
+                except StopIteration:
+                    pass
+            if self.on_corpus.active:
+                yield self.agg[1](self.intern3())
+            # if self.variation:
+            #     yield self.agg2(self.intern4())
+        if self.randomize.active:
+            yield self.agg[1](self.intern2())
 
     def g2(self) -> None:
         print(self.descr_str)
@@ -381,31 +402,66 @@ class tmp_class:
             print(x)
         print('-------------')
 
+
+    def g3(self) -> None:
+        fig = plt.plot()
+        Y = {}
+        E = {}
+        X = []
+        L = []
+        for a in self.f():
+            for k, (v1, v2) in a.items():
+                X.append(k)
+                if not L:
+                    L = list(v1.dic.keys())
+                for l, i, j in zip(L, v1.dic.values(), v2.dic.values()):
+                    Y[l] = Y.setdefault(l, []) + [i[0]]
+                    E[l] = E.setdefault(l, []) + [j[0]]
+        for y, e, l in zip(Y.values(), E.values(), L):
+            x, y, e = zip(*sorted(zip(X, y, e)))
+            plt.errorbar(x, y, yerr=e, label=l)
+        plt.ylim(0, 1)
+        plt.xlim(0, 100)
+        plt.legend()
+        plt.show()
+
     def h(self):
         map(to_tuple, self.intern1())
 
 
 ALL_TESTS = {
-    a1_test: tmp_class(a1_test, 'a1', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
-    a2_test: tmp_class(a2_test, 'a2', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
-    a3_test: tmp_class(a3_test, 'a3', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
-    b1_test: tmp_class(b1_test, 'b1', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
-    b2_test: tmp_class(b2_test, 'b2', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
-    d1_test: tmp_class(d1_test, 'd1', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
-    d2_test: tmp_class(d2_test, 'd2', repetitions=1, agg= simple_and_acc, agg2=simple_and_acc),
-    identity_test: tmp_class(identity_test, 'e1 | identity', repetitions=100, agg= simple_and_acc, agg2=simple_and_acc),# agg=list_and_acc, agg2=list_and_acc_acc)
-    non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', repetitions=100, start=2, end=4, agg= simple_and_acc, agg2=simple_and_acc),
-    f_test: tmp_class(f_test, 'f', repetitions=100, agg=simple_or_acc, agg2=simple_or_acc),
-    metric_1_symetry_test: tmp_class(metric_1_symetry_test, 'metrique 1', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
-    metric_2_non_negativity_test: tmp_class(metric_2_non_negativity_test, 'metrique 2', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
-    metric_3: tmp_class(metric_3, 'metrique 3', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
-    metric_4_triangle_test: tmp_class(metric_4_triangle_test, 'metrique 4', end=6, repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
-    metric_5_indiscernable: tmp_class(metric_5_indiscernable, 'metrique 5', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
-    metric_6: tmp_class(metric_6, 'metrique 6', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
-    metric_7: tmp_class(metric_7, 'metrique 7', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
-    metric_8: tmp_class(metric_8, 'metrique 8', repetitions=100, agg= list_and_acc1, agg2=list_and_acc2),
-    singleton_test: tmp_class(singleton_test, 'singleton', repetitions=100, agg= macro_avg_acc, agg2=macro_avg_acc, randomize=True),
-    entity_test: tmp_class(entity_test, 'entity', repetitions=100, agg= macro_avg_std_acc1, agg2=macro_avg_std_acc2, randomize=True),
+    a1_test: tmp_class(a1_test, 'a1', systematic=exp_setup(True, 1, 1, 7)),
+    a2_test: tmp_class(a2_test, 'a2', systematic=exp_setup(True, 1, 1, 7)),
+    a3_test: tmp_class(a3_test, 'a3', systematic=exp_setup(True, 1, 1, 7)),
+    b1_test: tmp_class(b1_test, 'b1', systematic=exp_setup(True, 1, 1, 7)),
+    b2_test: tmp_class(b2_test, 'b2', systematic=exp_setup(True, 1, 1, 7)),
+    c_test: tmp_class(lambda x: c_test(x, modifications=4), 'c',
+                      agg=(series_micro_acc1, series_micro_acc2), systematic=exp_setup(True, 30, 9, 10)),
+    d1_test: tmp_class(d1_test, 'd1', systematic=exp_setup(True, 1, 1, 7)),
+    d2_test: tmp_class(d2_test, 'd2', systematic=exp_setup(True, 1, 1, 7)),
+    identity_test: tmp_class(identity_test, 'e1 | identity', randomize=exp_setup(True, 100, 1, 7)),
+    non_identity_test: tmp_class(non_identity_test, 'e2 | non_identity', randomize=exp_setup(True, 100, 1, 7)),
+    f_test: tmp_class(f_test, 'f', agg=(simple_or_acc, simple_or_acc), randomize=exp_setup(True, 100, 1, 7)),
+    metric_1_symetry_test: tmp_class(metric_1_symetry_test, 'metrique 1',
+                                     agg=(list_and_acc1, list_and_acc2), randomize=exp_setup(True, 100, 1, 7)),
+    metric_2_non_negativity_test: tmp_class(metric_2_non_negativity_test, 'metrique 2',
+                                            agg=(list_and_acc1, list_and_acc2), randomize=exp_setup(True, 100, 1, 7)),
+    metric_3: tmp_class(metric_3, 'metrique 3',
+                        agg=(list_and_acc1, list_and_acc2), randomize=exp_setup(True, 100, 1, 7)),
+    metric_4_triangle_test: tmp_class(metric_4_triangle_test, 'metrique 4',
+                                      agg=(list_and_acc1, list_and_acc2), randomize=exp_setup(True, 100, 1, 6)),
+    metric_5_indiscernable: tmp_class(metric_5_indiscernable, 'metrique 5',
+                                      agg=(list_and_acc1, list_and_acc2), randomize=exp_setup(True, 100, 1, 7)),
+    metric_6: tmp_class(metric_6, 'metrique 6',
+                        agg=(list_and_acc1, list_and_acc2), randomize=exp_setup(True, 100, 1, 7)),
+    metric_7: tmp_class(metric_7, 'metrique 7',
+                        agg=(list_and_acc1, list_and_acc2), randomize=exp_setup(True, 100, 1, 7)),
+    metric_8: tmp_class(metric_8, 'metrique 8',
+                        agg=(list_and_acc1, list_and_acc2), randomize=exp_setup(True, 100, 1, 7)),
+    singleton_test: tmp_class(singleton_test, 'singleton',
+                              agg=(macro_avg_acc, macro_avg_acc), randomize=exp_setup(True, 100, 1, 7)),
+    entity_test: tmp_class(entity_test, 'entity',
+                           agg=(macro_avg_acc, macro_avg_acc), randomize=exp_setup(True, 100, 1, 7)),
 }
 
 

@@ -1,7 +1,9 @@
 # std libs
 from typing import TypeVar, List, Callable, Set, Iterator
-from random import shuffle
-from math import floor
+from random import shuffle, randint, random
+from math import floor, ceil, factorial, exp, isclose
+from functools import reduce
+from collections import defaultdict
 
 # other libs
 from scipy.stats import beta
@@ -120,3 +122,62 @@ def is_dual(partition: Partition):
     Return True if the given partition is composed only of singletons
     """
     return all((len(entity) == 1 for entity in partition))
+
+
+def introduce_randomness(partition: Partition):
+    """
+    randomize the entity of a random mention in the partition
+    """
+    size = reduce(lambda x, y: x + len(y), partition, 0)
+    old_pos = randint(0, size - 1)
+
+    cursor = 0
+    elem = None
+    res = []
+    flag= False
+    for cluster in partition:
+        if cursor <= old_pos < cursor + len(cluster) and not flag:
+            for c, e in enumerate(cluster, cursor):
+                if old_pos == c:
+                    elem = e
+                    break
+            new_cluster = cluster - {elem}
+            if new_cluster: res.append(cluster - {elem})
+            flag = True
+        else:
+            res.append(cluster.copy())
+            cursor += len(cluster)
+    new_pos = randint(0, len(res))
+    if new_pos == len(res):
+        res.append({elem})
+    else:
+        res[new_pos] |= {elem}
+    return res
+
+
+def bell(n: int) -> int:
+    """
+    Returns the n'th Bell's number.
+    This is the number of possible partitions of a set of n elements.
+    """
+    return ceil(sum((k ** n) / (factorial(k)) for k in range(2 * n)) / exp(1))
+
+
+def r_part(n: int) -> Partition:
+    """
+    Generates a random partition of n elements
+    """
+    def q(n, u):
+        return(bell(n) ** -1) * exp(-1) * (u ** n) / factorial(u)
+    dic = defaultdict(list)
+    firsts_q = [q(n, 1)]
+    r = random()
+    nb_urn = 1
+    p = q(n, nb_urn)
+    while r > p or isclose(r, p):
+        nb_urn += 1
+        p += q(n, nb_urn)
+    for i in range(n):
+        urn = random() // (1/nb_urn)
+        dic[urn] += [i]
+    return [{*entity} for entity in dic.values() if entity]
