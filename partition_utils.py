@@ -152,13 +152,14 @@ def bell(n: int) -> int:
     return ceil(sum((k ** n) / (factorial(k)) for k in range(2 * n)) / exp(1))
 
 
-def r_part(n: int) -> Partition:
+def r_part(mentions: List) -> Partition:
     """
     Generates a random partition of n elements
     """
     def q(n, u):
         return(bell(n) ** -1) * exp(-1) * (u ** n) / factorial(u)
     dic = defaultdict(list)
+    n = len(mentions)
     firsts_q = [q(n, 1)]
     r = random()
     nb_urn = 1
@@ -166,7 +167,7 @@ def r_part(n: int) -> Partition:
     while r > p or isclose(r, p):
         nb_urn += 1
         p += q(n, nb_urn)
-    for i in range(n):
+    for i in mentions:
         urn = random() // (1/nb_urn)
         dic[urn] += [i]
     return [{*entity} for entity in dic.values() if entity]

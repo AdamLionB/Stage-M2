@@ -8,4 +8,4 @@ x = [c_test]
 
 for k,v in ALL_TESTS.items():
     if k in x:
-        v.g3()
+        v.g1()

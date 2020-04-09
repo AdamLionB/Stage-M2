@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 # std libs
-from typing import Tuple, Dict, Iterator, Union, Any, Callable, TypeVar, List, Generic
+from typing import Tuple, Dict, Iterator, Union, Any, Callable, TypeVar, List, Generic, Hashable
 from enum import Enum, auto
 from math import isclose, ceil, factorial, exp
 from time import time
@@ -251,8 +251,9 @@ def list_and_setup(x: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[
         return [], x[1]
 
 
-def list_and_reducer(x: Tuple[List, ScoreHolder[bool]], y: Tuple[Any, ScoreHolder[bool]]) -> Tuple[
-    List, ScoreHolder[bool]]:
+def list_and_reducer(
+        x: Tuple[List, ScoreHolder[bool]], y: Tuple[Any, ScoreHolder[bool]]
+) -> Tuple[List, ScoreHolder[bool]]:
     res = x[1] & y[1]
     if reduce(
             lambda a, b: a | b,
@@ -269,8 +270,9 @@ def list_or_setup(x: Tuple[Any, ScoreHolder[bool]]) -> Tuple[List, ScoreHolder[b
         return [], x[1]
 
 
-def list_or_reducer(x: Tuple[List, ScoreHolder[bool]], y: Tuple[Any, ScoreHolder[bool]]) -> Tuple[
-    List, ScoreHolder[bool]]:
+def list_or_reducer(
+        x: Tuple[List, ScoreHolder[bool]], y: Tuple[Any, ScoreHolder[bool]]
+) -> Tuple[List, ScoreHolder[bool]]:
     res = x[1] | y[1]
     if reduce(
             lambda a, b: a | b,
@@ -304,8 +306,9 @@ def macro_avg_acc(scoress: Iterator[Tuple[Any, ScoreHolder[float]]]) -> ScoreHol
     )
 
 
-def macro_avg_std_acc1(scoress: Iterator[Tuple[Any, ScoreHolder[float]]]) -> Tuple[
-    ScoreHolder[float], ScoreHolder[float]]:
+def macro_avg_std_acc1(
+        scoress: Iterator[Tuple[Any, ScoreHolder[float]]]
+) -> Tuple[ScoreHolder[float], ScoreHolder[float]]:
     return acc(
         lambda x: (1, x[1], x[1] ** 2),
         lambda x, y: (x[0] + 1, x[1] + y[1], x[2] + (y[1] ** 2)),
@@ -343,8 +346,9 @@ def micro_avg_acc2(scoress: Iterator[Tuple[Any, Tuple[int, ScoreHolder[float]]]]
     )
 
 
-def micro_avg_std_acc1(scoress: Iterator[Tuple[Any, ScoreHolder[float]]]
-                       ) -> Tuple[int, ScoreHolder[float], ScoreHolder[float]]:
+def micro_avg_std_acc1(
+        scoress: Iterator[Tuple[Any, ScoreHolder[float]]]
+) -> Tuple[int, ScoreHolder[float], ScoreHolder[float]]:
     return acc(
         lambda x: (1, x[1], x[1] ** 2),
         lambda x, y: (x[0] + 1, x[1] + y[1], x[2] + (y[1] ** 2)),
@@ -399,6 +403,9 @@ def series_setup(
 ) -> Dict[int, Tuple[int, ScoreHolder[float], ScoreHolder[float]]]:
     nb_sing = sum(1 for i in x[0][0] if len(i) == 1)
     key = int(100 * nb_sing / len(x[0][0]))
+    # key = len(x[0][0])
+    # key = str(x[0][0])
+    key = (len(x[0][0]), nb_sing)
     dic = {key: (1, x[1], x[1] ** 2)}
     return dic
 
@@ -408,7 +415,11 @@ def series_reducer(
         x: Tuple[Tuple[Partition, Partition], ScoreHolder[float]]
 ) -> Dict[int, Tuple[int, ScoreHolder[float], ScoreHolder[float]]]:
     nb_sing = sum(1 for i in x[0][0] if len(i) == 1)
+
     key = int(100 * nb_sing / len(x[0][0]))
+    # key = len(x[0][0])
+    # key = str(x[0][0])
+    key = (len(x[0][0]), nb_sing)
     old_val = dic.get(key)
     if old_val is not None:
         dic[key] = old_val[0] + 1, old_val[1] + x[1], old_val[2] + x[1] ** 2
@@ -448,6 +459,32 @@ def series_micro_acc2(
     return acc(
         second,
         series_reducer2,
-        lambda dic: {k: (v[1] / v[0], ((v[2] - (v[1] ** 2) / v[0]) / v[0]) ** (1 / 2)) for k, v in dic.items()},
+        lambda dic: {k: (v[0], v[1] / v[0], ((v[2] - (v[1] ** 2) / v[0]) / v[0]) ** (1 / 2)) for k, v in dic.items()},
         scoress
     )
+
+
+# def series_setup(
+#         x: Tuple[List[Partition], ScoreHolder[float]],
+#         *,
+#         key_func: Callable[[Tuple[List[Partition], ScoreHolder[float]]], T] = lambda x: str(x[0][0]),
+#         val_func: Callable[[Tuple[List[Partition], ScoreHolder[float]]], U] = lambda x: (1, x[1], x[1] ** 2)
+# ) -> Dict[T, U]:
+#     key = key_func(x)
+#     return {key: val_func(x)}
+#
+#
+# def series_reducer(
+#         dic: Dict[T, U],
+#         x: Tuple[List[Partition], ScoreHolder[float]],
+#         *,
+#         key_func: Callable[[Tuple[List[Partition], ScoreHolder[float]]], T] = lambda x: str(x[0][0]),
+#         val_func: Callable[[Tuple[List[Partition], ScoreHolder[float]]], U] = lambda x: (1, x[1], x[1] ** 2)
+# ) -> Dict[int, Tuple[int, ScoreHolder[float], ScoreHolder[float]]]:
+#     key = key_func(x)
+#     old_val = dic.get(key)
+#     if old_val is not None:
+#         dic[key] = tuple(a + b for a, b in zip(old_val, val_func(x)))
+#     else:
+#         dic[key] = val_func(x)
+#     return dic
