@@ -25,8 +25,20 @@ U = TypeVar('U')
 V = TypeVar('V')
 
 
-def a1_test() -> ScoreHolder[bool]:
+def sing_1_a1() -> ScoreHolder[bool]:
+    """
+    Runs the SING_1 a1 test which aims to check if the score recognize a correctly resolved singleton from a wrong one.
+    To case are compared s([{1, 2}, {3}, {4}], [{1, 2}, {3}, {4}]) vs s([{1, 2}, {3}, {4}], [{1, 2}, {3, 4}])
+    The entity {1, 2} is here to avoid the know issue of division of some score by 0 for fully dual partition. This
+    entity is in both case perfectly resolved and should not impact the result of the test.
+    The singleton {3} and {4} are in the first case perfectly resolved, and mistakenly fused in the second case.
+    As the only difference between the two case are the mentions 3 and 4 then if the score correctly distinguish
+    correctly resolved singleton  the first case should have a higher score than the second.
+    """
     def intern(x: float, y: float) -> bool:
+        """
+        x >= y for floats
+        """
         return not isclose(x, y) and x > y
 
     gold = [{1, 2}, {3}, {4}]
@@ -34,8 +46,20 @@ def a1_test() -> ScoreHolder[bool]:
     return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
 
 
-def a2_test() -> ScoreHolder[bool]:
+def sing_1_a2() -> ScoreHolder[bool]:
+    """
+    Runs the SING_1 a2 test which aims to check if the score recognize a correctly resolved singleton from a wrong one.
+    To case are compared s([{3}, {4}], [{3}, {4}]) vs s([{3}, {4}], [{3, 4}])
+    Unlike the SING_1 a1 test which avoid fully dual partition by adding the entity {1, 2} to the partition, this test
+    does not.
+    The singleton {3} and {4} are in the first case perfectly resolved, and mistakenly fused in the second case.
+    As the only difference between the two case are the mentions 3 and 4 then if the score correctly distinguish
+    correctly resolved singleton  the first case should have a higher score than the second.
+    """
     def intern(x: float, y: float) -> bool:
+        """
+            x >= y for floats
+        """
         return not isclose(x, y) and x > y
 
     gold = [{3}, {4}]
@@ -43,7 +67,17 @@ def a2_test() -> ScoreHolder[bool]:
     return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
 
 
-def a3_test() -> ScoreHolder[bool]:
+def sing_1_b() -> ScoreHolder[bool]:
+    """
+    Runs the SING_1 b test which aims to check if the score recognize a correctly resolved singleton from a wrong one.
+    To case are compared s([{1, 2}, {3}], [{1, 2}, {3}]) vs s([{1, 2}, {3}], [{1, 2, 3}])
+    The entity {1, 2} contains 2 mentions in order to avoid the known issue of division of some score by 0 for
+    fully dual partition a. This entity is in both case perfectly resolved and should not impact the result of the test.
+    The singleton {3} and {4} are in the first case perfectly resolved, and mistakenly fused in the second case.
+    As the only difference between the two case are the mentions 3 and 4 then if the score correctly distinguish
+    correctly resolved singleton  the first case should have a higher score than the second.
+    """
+    #TODO
     def intern(x: float, y: float) -> bool:
         return not isclose(x, y) and x > y
 
@@ -52,7 +86,7 @@ def a3_test() -> ScoreHolder[bool]:
     return ScoreHolder.apply(evaluates(gold, gold), intern, evaluates(gold, sys))
 
 
-def b1_test() -> ScoreHolder[bool]:
+def biais_1() -> ScoreHolder[bool]:
     def intern(x: float, y: float) -> bool:
         return not isclose(x, y) and x < y
 
@@ -62,7 +96,7 @@ def b1_test() -> ScoreHolder[bool]:
     return ScoreHolder.apply(evaluates(gold, sys1), intern, evaluates(gold, sys2))
 
 
-def b2_test() -> ScoreHolder[bool]:
+def biais_2() -> ScoreHolder[bool]:
     def intern(x: float, y: float) -> bool:
         return not isclose(x, y) and x < y
 
@@ -72,14 +106,14 @@ def b2_test() -> ScoreHolder[bool]:
     return ScoreHolder.apply(evaluates(gold, sys1), intern, evaluates(gold, sys2))
 
 
-def c_test(gold: Partition, *, modifications: int = 1) -> ScoreHolder[float]:
+def sing_2(gold: Partition, *, modifications: int = 1) -> ScoreHolder[float]:
     sys = gold
     for i in range(modifications):
         sys = introduce_randomness(sys)
     return evaluates_main(gold, sys)
 
 
-def d1_test() -> ScoreHolder[bool]:
+def weight_1() -> ScoreHolder[bool]:
     def intern(x: float, y: float) -> bool:
         return isclose(x, y)
 
@@ -90,7 +124,7 @@ def d1_test() -> ScoreHolder[bool]:
     return ScoreHolder.apply(evaluates(gold1, sys1), intern, evaluates(gold2, sys2))
 
 
-def d2_test() -> ScoreHolder[bool]:
+def weight_2() -> ScoreHolder[bool]:
     def intern(x: float, y: float) -> bool:
         return isclose(x, y)
 
@@ -100,7 +134,7 @@ def d2_test() -> ScoreHolder[bool]:
     return ScoreHolder.apply(evaluates(gold, sys1), intern, evaluates(gold, sys2))
 
 
-def f_test(gold: Partition, sys: Partition) -> ScoreHolder[bool]:
+def trivia_1(gold: Partition, sys: Partition) -> ScoreHolder[bool]:
     def intern(x: float) -> bool:
         return isclose(x, 0)
 
@@ -181,6 +215,17 @@ def metric_4_triangle_test(a: Partition, b: Partition, c: Partition) -> ScoreHol
         return isclose(x, y) or x < y
 
     return ScoreHolder.apply(evaluates(a, b) + evaluates(b, c), intern, evaluates(b, b) + evaluates(a, c))
+
+def metric_4b_ultra(a: Partition, b: Partition, c: Partition) -> ScoreHolder[bool]:
+    """
+    evaluates whether the (similarity) triangle inequality is respected
+    max(s(a,b),s(b,c)) <= s(a,c)
+    """
+
+    def intern(x: float, y: float) -> bool:
+        return isclose(x, y) or x < y
+
+    return ScoreHolder.apply(ScoreHolder.apply(evaluates(a, b),max,evaluates(b, c)), intern, evaluates(a, c))
 
 
 def metric_5_indiscernable(gold: Partition, sys: Partition) -> ScoreHolder[bool]:
@@ -319,7 +364,8 @@ def all_partitions_test(
 
 
 mod = 3
-
+def printmod():
+    print(mod)
 
 @dataclass
 class ExpSetup:
@@ -413,7 +459,7 @@ class ExpRunner:
                     Y[l] = Y.setdefault(l, []) + [i[0]]
                     E[l] = E.setdefault(l, []) + [j[0]]
                     C[l] = C.setdefault(l, []) + [count]
-        with open('data_brut2.csv', 'a', newline='') as csv_file:
+        with open('data_brut3.csv', 'a', newline='') as csv_file:
             wr = csv.writer(csv_file, delimiter=';', quotechar='"')
             for c, y, e, l in zip(C.values(), Y.values(), E.values(), L):
                 x, y, e, c = zip(*sorted(zip(X, y, e, c)))
@@ -454,36 +500,38 @@ class ExpRunner:
 
 
 ALL_TESTS = {
-    a1_test: ExpRunner(a1_test, 'a1', systematic=ExpSetup(True, 1, 1, 7)),
-    a2_test: ExpRunner(a2_test, 'a2', systematic=ExpSetup(True, 1, 1, 7)),
-    a3_test: ExpRunner(a3_test, 'a3', systematic=ExpSetup(True, 1, 1, 7)),
-    b1_test: ExpRunner(b1_test, 'b1', systematic=ExpSetup(True, 1, 1, 7)),
-    b2_test: ExpRunner(b2_test, 'b2', systematic=ExpSetup(True, 1, 1, 7)),
-    c_test: ExpRunner(lambda x: c_test(x, modifications=mod), 'c',
+    sing_1_a1: ExpRunner(sing_1_a1, 'a1', systematic=ExpSetup(True, 1, 1, 7)),
+    sing_1_a2: ExpRunner(sing_1_a2, 'a2', systematic=ExpSetup(True, 1, 1, 7)),
+    sing_1_b: ExpRunner(sing_1_b, 'a3', systematic=ExpSetup(True, 1, 1, 7)),
+    biais_1: ExpRunner(biais_1, 'b1', systematic=ExpSetup(True, 1, 1, 7)),
+    biais_2: ExpRunner(biais_2, 'b2', systematic=ExpSetup(True, 1, 1, 7)),
+    sing_2: ExpRunner(lambda x: sing_2(x, modifications=mod), 'c',
                       agg=(series_micro_acc1, series_micro_acc2),
                       #systematic=ExpSetup(True, 30, 9, 10)
-                      randomize=ExpSetup(True, 6_000_000, 20, 21)),
-    d1_test: ExpRunner(d1_test, 'd1', systematic=ExpSetup(True, 1, 1, 7)),
-    d2_test: ExpRunner(d2_test, 'd2', systematic=ExpSetup(True, 1, 1, 7)),
+                      randomize=ExpSetup(True, 1_000_000, 20, 21)),
+    weight_1: ExpRunner(weight_1, 'd1', systematic=ExpSetup(True, 1, 1, 7)),
+    weight_2: ExpRunner(weight_2, 'd2', systematic=ExpSetup(True, 1, 1, 7)),
     identity_test: ExpRunner(identity_test, 'e1 | identity', randomize=ExpSetup(True, 100, 1, 7)),
     non_identity_test: ExpRunner(non_identity_test, 'e2 | non_identity', randomize=ExpSetup(True, 100, 1, 7)),
-    f_test: ExpRunner(f_test, 'f', agg=(simple_or_acc, simple_or_acc), randomize=ExpSetup(True, 100, 1, 7)),
+    trivia_1: ExpRunner(trivia_1, 'f', agg=(simple_or_acc, simple_or_acc), randomize=ExpSetup(True, 100, 1, 7)),
     metric_1_symetry_test: ExpRunner(metric_1_symetry_test, 'metrique 1',
-                                     agg=(list_and_acc1, list_and_acc2), randomize=ExpSetup(True, 100, 1, 7)),
+                                     agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
     metric_2_non_negativity_test: ExpRunner(metric_2_non_negativity_test, 'metrique 2',
-                                            agg=(list_and_acc1, list_and_acc2), randomize=ExpSetup(True, 100, 1, 7)),
+                                            agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
     metric_3: ExpRunner(metric_3, 'metrique 3',
-                        agg=(list_and_acc1, list_and_acc2), randomize=ExpSetup(True, 100, 1, 7)),
+                        agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
+    metric_4b_ultra: ExpRunner(metric_4b_ultra, 'metrique 4b',
+                                      agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 6)),
     metric_4_triangle_test: ExpRunner(metric_4_triangle_test, 'metrique 4',
-                                      agg=(list_and_acc1, list_and_acc2), randomize=ExpSetup(True, 100, 1, 6)),
+                                      agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 6, 7)),
     metric_5_indiscernable: ExpRunner(metric_5_indiscernable, 'metrique 5',
-                                      agg=(list_and_acc1, list_and_acc2), randomize=ExpSetup(True, 100, 1, 7)),
+                                      agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
     metric_6: ExpRunner(metric_6, 'metrique 6',
-                        agg=(list_and_acc1, list_and_acc2), randomize=ExpSetup(True, 100, 1, 7)),
+                        agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
     metric_7: ExpRunner(metric_7, 'metrique 7',
-                        agg=(list_and_acc1, list_and_acc2), randomize=ExpSetup(True, 100, 1, 7)),
+                        agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
     metric_8: ExpRunner(metric_8, 'metrique 8',
-                        agg=(list_and_acc1, list_and_acc2), randomize=ExpSetup(True, 100, 1, 7)),
+                        agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
     singleton_test: ExpRunner(singleton_test, 'singleton',
                               agg=(macro_avg_acc, macro_avg_acc), randomize=ExpSetup(True, 100, 1, 7)),
     entity_test: ExpRunner(entity_test, 'entity',

@@ -105,7 +105,7 @@ def is_regular(partition: Partition) -> bool:
 
 def contains_singleton(partition: Partition):
     """
-    Returns Ture if the given partition contains at least one singleton
+    Returns True if the given partition contains at least one singleton
     """
     return any((len(entity) == 1 for entity in partition))
 
@@ -124,7 +124,7 @@ def is_dual(partition: Partition):
     return all((len(entity) == 1 for entity in partition))
 
 
-def introduce_randomness(partition: Partition):
+def introduce_randomness1(partition: Partition):
     """
     randomize the entity of a random mention in the partition
     """
@@ -135,6 +135,24 @@ def introduce_randomness(partition: Partition):
     res[old_pos] -= {elem}
     if len(part) == 0:
         res.remove(part)
+
+    new_pos = randint(0, len(res))
+    if new_pos == len(res):
+        res.append({elem})
+    else:
+        res[new_pos] |= {elem}
+    return res
+
+def get_partition_size(partition : Partition):
+    return reduce(lambda x, y: x + len(y), partition, 0)
+
+
+def introduce_randomness(partition: Partition):
+    """
+    randomize the entity of a random mention in the partition
+    """
+    elem = choice(get_mentions(partition))
+    res = [{*e} - {elem} for e in partition if {*e} != {elem}]
 
     new_pos = randint(0, len(res))
     if new_pos == len(res):
@@ -154,7 +172,7 @@ def bell(n: int) -> int:
 
 def r_part(mentions: List) -> Partition:
     """
-    Generates a random partition of n elements
+    Generates a random partition from the mention list
     """
     def q(n, u):
         return(bell(n) ** -1) * exp(-1) * (u ** n) / factorial(u)
