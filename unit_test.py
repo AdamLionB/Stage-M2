@@ -3,14 +3,13 @@ from random import random
 from functools import reduce
 from itertools import combinations
 
-from partition_utils import entity_partition, singleton_partition, partition_to_sklearn_format, get_mentions, \
-    random_partition, beta_partition
-from utils import ScoreHolder, Growth, to_tuple, evaluates
+import partition_utils
+from utils import ScoreHolder, to_tuple, evaluates
 
 
 class test_partition_utils(unittest.TestCase):
     def test_random_partition(self):
-        func = random_partition
+        func = partition_utils.random_partition
         mentions = []
         assert func(mentions, random) == []
         mentions = list(range(42))
@@ -21,24 +20,24 @@ class test_partition_utils(unittest.TestCase):
         assert reduce(lambda x, y: x + y, map(len, func(mentions, random))) == 3
 
     def test_beta_partition(self):
-        func = beta_partition
+        func = partition_utils.beta_partition
         mentions = []
-        assert func(1, 1, mentions) == []
+        assert func(mentions, 1, 1) == []
         mentions = list(range(42))
-        assert reduce(lambda x, y: x + y, map(len, func(1, 1, mentions))) == 42
-        assert reduce(lambda x, y: x + y, map(len, func(1, 100, mentions))) == 42
-        assert reduce(lambda x, y: x + y, map(len, func(100, 100, mentions))) == 42
-        assert reduce(lambda x, y: x + y, map(len, func(100, 1, mentions))) == 42
-        assert reduce(lambda x, y: x + y, map(len, func(1, 0.5, mentions))) == 42
-        assert reduce(lambda x, y: x + y, map(len, func(0.5, 0.5, mentions))) == 42
-        assert reduce(lambda x, y: x + y, map(len, func(0.5, 1, mentions))) == 42
-        assert reduce(lambda x, y: x + y, map(len, func(0.5, 2, mentions))) == 42
-        assert reduce(lambda x, y: x + y, map(len, func(2, 0.5, mentions))) == 42
+        assert reduce(lambda x, y: x + y, map(len, func(mentions, 1, 1))) == 42
+        assert reduce(lambda x, y: x + y, map(len, func(mentions, 1, 100))) == 42
+        assert reduce(lambda x, y: x + y, map(len, func(mentions, 100, 100))) == 42
+        assert reduce(lambda x, y: x + y, map(len, func(mentions, 100, 1))) == 42
+        assert reduce(lambda x, y: x + y, map(len, func(mentions, 1, 0.5))) == 42
+        assert reduce(lambda x, y: x + y, map(len, func(mentions, 0.5, 0.5))) == 42
+        assert reduce(lambda x, y: x + y, map(len, func(mentions, 0.5, 1))) == 42
+        assert reduce(lambda x, y: x + y, map(len, func(mentions, 0.5, 2))) == 42
+        assert reduce(lambda x, y: x + y, map(len, func(mentions, 2, 0.5))) == 42
         mentions = ['a', 'bc', 'é']
-        assert reduce(lambda x, y: x + y, map(len, func(2, 0.5, mentions))) == 3
+        assert reduce(lambda x, y: x + y, map(len, func(mentions, 2, 0.5))) == 3
 
     def test_entity_partition(self):
-        func = entity_partition
+        func = partition_utils.entity_partition
         mentions = []
         assert func(mentions) == []
         mentions = [1]
@@ -60,7 +59,7 @@ class test_partition_utils(unittest.TestCase):
         assert func(mentions) == [{1.2}]
 
     def test_singleton_partition(self):
-        func = singleton_partition
+        func = partition_utils.singleton_partition
         mentions = []
         assert func(mentions) == []
         mentions = [1]
@@ -81,7 +80,7 @@ class test_partition_utils(unittest.TestCase):
         assert func(mentions) == [{1.2}]
 
     def test_partition_to_sklearn_format(self):
-        func = partition_to_sklearn_format
+        func = partition_utils.partition_to_sklearn_format
         partition = []
         assert func(partition) == []
         partition = [{1}, {4, 3}, {2, 5, 6}]
@@ -90,7 +89,7 @@ class test_partition_utils(unittest.TestCase):
         assert func(partition) == [1, 0, 1]
 
     def test_get_mentions(self):
-        func = get_mentions
+        func = partition_utils.get_mentions
         partition = []
         assert func(partition) == []
         partition = [{1}]
@@ -99,6 +98,84 @@ class test_partition_utils(unittest.TestCase):
         assert len(func(partition)) == 6
         partition = [{'b'}, {'c', 'a'}]
         assert len(func(partition)) == 3
+
+    def test_all_partition_of_size(self):
+        func = partition_utils.all_partition_of_size
+        sizes = [1, 2, 5, 15, 52, 203, 877, 4140, 21147, 115975]
+        for i in range(10):
+            assert sum((1 for _ in func(i+1))) == sizes[i]
+
+    def test_all_partition_up_to_size(self):
+        func = partition_utils.all_partition_up_to_size
+        sizes = [1, 2, 5, 15, 52, 203, 877, 4140, 21147, 115975]
+        assert sum((1 for _ in func(10) )) == sum(sizes)
+
+    def test_is_regular(self):
+        func = partition_utils.is_regular
+        assert not func([{1, 2, 3, 4}])
+        assert func([{1, 2, 3}, {4}])
+        assert func([{1, 2}, {3, 4}])
+        assert func([{1, 2}, {3}, {4}])
+        assert not func([{1}, {2}, {3}, {4}])
+
+    def test_contains_singleton(self):
+        func = partition_utils.contains_singleton
+        assert not func([{1, 2, 3, 4}])
+        assert func([{1, 2, 3}, {4}])
+        assert not func([{1, 2}, {3, 4}])
+        assert func([{1, 2}, {3}, {4}])
+        assert func([{1}, {2}, {3}, {4}])
+
+    def test_contains_one_entity(self):
+        func = partition_utils.contains_one_entity
+        assert func([{1, 2, 3, 4}])
+        assert not func([{1, 2, 3}, {4}])
+        assert not func([{1, 2}, {3, 4}])
+        assert not func([{1, 2}, {3}, {4}])
+        assert not func([{1}, {2}, {3}, {4}])
+
+    def test_is_dual(self):
+        func = partition_utils.is_dual
+        assert not func([{1, 2, 3, 4}])
+        assert not func([{1, 2, 3}, {4}])
+        assert not func([{1, 2}, {3, 4}])
+        assert not func([{1, 2}, {3}, {4}])
+        assert func([{1}, {2}, {3}, {4}])
+
+    def test_get_partition_size(self):
+        func = partition_utils.get_partition_size
+        assert func([]) == 0
+        assert func([{1}]) == 1
+        assert func([{1, 2}]) == 2
+        assert func([{1}, {2}]) == 2
+        assert func([{1, 2, 3}]) == 3
+        assert func([{1, 2}, {3}]) == 3
+        assert func([{1}, {2}, {3}]) == 3
+
+    def test_introduce_randomness(self):
+        #TODO make statistical test ? some like 'random mutation of random partition follows a uniform distrib'
+        func = partition_utils.introduce_randomness
+        size_func = partition_utils.get_partition_size
+        for part in partition_utils.all_partition_of_size(7):
+            assert size_func(func(part)) == size_func(part)
+
+    def test_bell(self):
+        """
+        Only test if this function is good enough for our purpose
+        """
+        func = partition_utils.bell
+        b = [1, 2, 5, 15, 52, 203, 877, 4140, 21147, 115975, 678570, 4213597, 27644437, 190899322, 1382958545, \
+             10480142147, 82864869804, 682076806159, 5832742205057, 51724158235372]
+        for i in range(len(b)):
+            assert func(i+1) == b[i] or func(i+1) == b[i]+1
+
+    def test_r_part(self):
+        #TODO make statistical test ? some like 'random partition follows a uniform distrib'
+        func = partition_utils.r_part
+        size_func = partition_utils.get_partition_size
+        for _ in range(877*2):
+            assert size_func(func(range(7))) == 7
+
 
 
 class test_find_better_name(unittest.TestCase):
@@ -168,80 +245,30 @@ class test_find_better_name(unittest.TestCase):
         assert ScoreHolder({'a': (1,), 'b': (4, 9)}) == ScoreHolder({'a': (1,), 'b': (2, 3)}) ** 2
         assert ScoreHolder({'a': (1,), 'b': (2, 3)}) == ScoreHolder({'a': (1,), 'b': (4, 9)}) ** (1 / 2)
 
-    def test_ScoreHolder_average(self):
-        func = ScoreHolder.average
-        assert ScoreHolder({}) == func((ScoreHolder({}) for _ in range(1)))
-        assert ScoreHolder({}) == func((ScoreHolder({}) for _ in range(2)))
-        assert ScoreHolder({'a': (1,)}) == func(iter([ScoreHolder({'a': (1,)}), ScoreHolder({'a': (1,)})]))
-        assert ScoreHolder({'a': (3,)}) == func(iter([ScoreHolder({'a': (2,)}), ScoreHolder({'a': (4,)})]))
-        assert ScoreHolder({'a': (3, 5)}) == func(iter([ScoreHolder({'a': (2, 4)}), ScoreHolder({'a': (4, 6)})]))
-        assert ScoreHolder({'a': (3, 5), 'b': (0, 1)}) == \
-               func(iter([ScoreHolder({'a': (2, 4), 'b': (-1, 2)}), ScoreHolder({'a': (4, 6), 'b': (1, 0)})]))
-
-    def test_ScoreHolder_avg_std(self):
-        func = ScoreHolder.avg_std
-        assert (ScoreHolder({}), ScoreHolder({})) == func((ScoreHolder({}) for _ in range(1)))
-        assert (ScoreHolder({}), ScoreHolder({})) == func((ScoreHolder({}) for _ in range(2)))
-        assert (ScoreHolder({'a': (1,)}), ScoreHolder({'a': (0,)})) == \
-               func(iter([ScoreHolder({'a': (1,)}), ScoreHolder({'a': (1,)})]))
-        assert (ScoreHolder({'a': (3,)}), ScoreHolder({'a': (1,)})) == \
-               func(iter([ScoreHolder({'a': (2,)}), ScoreHolder({'a': (4,)})]))
-        assert (ScoreHolder({'a': (3, 5)}), ScoreHolder({'a': (1, 1)})) == \
-               func(iter([ScoreHolder({'a': (2, 4)}), ScoreHolder({'a': (4, 6)})]))
-        assert (ScoreHolder({'a': (4, 5), 'b': (0, 1)}), ScoreHolder({'a': (2, 1), 'b': (1, 1)})) == \
-               func(iter([ScoreHolder({'a': (2, 4), 'b': (-1, 2)}), ScoreHolder({'a': (6, 6), 'b': (1, 0)})]))
-        assert (ScoreHolder({'a': (1,)}), ScoreHolder({'a': (0,)})) == \
-               func(iter([ScoreHolder({'a': (1,)})]))
-
-    def test_ScoreHolder_compare(self):
-        assert ScoreHolder({}) == ScoreHolder({}).compare(ScoreHolder({}))
-        assert ScoreHolder({'a': (Growth.STRICT_INCR,)}) == ScoreHolder({'a': (1,)}).compare(ScoreHolder({'a': (2,)}))
-        assert ScoreHolder({'a': (Growth.STRICT_INCR, Growth.CONST, Growth.STRICT_DECR)}) == \
-               ScoreHolder({'a': (1, 3, 5)}).compare(ScoreHolder({'a': (2, 3, 4)}))
-        assert ScoreHolder({'a': (Growth.STRICT_INCR, Growth.CONST), 'b': (Growth.STRICT_DECR,)}) == \
-               ScoreHolder({'a': (1, 3), 'b': (4,)}).compare(ScoreHolder({'a': (2, 3), 'b': (2,)}))
-
-    def test_ScoreHolder_compare_t(self):
-        assert ScoreHolder({}) == ScoreHolder({}).compare_t(tuple())
-        assert ScoreHolder({'a': (Growth.STRICT_INCR,)}) == ScoreHolder({'a': (1,)}).compare_t((2,))
-        assert ScoreHolder({'a': (Growth.STRICT_INCR, Growth.STRICT_DECR)}) == \
-               ScoreHolder({'a': (1, 1)}).compare_t((2, 0))
-        assert ScoreHolder({'a': (Growth.STRICT_INCR, Growth.STRICT_DECR), 'b': (Growth.STRICT_DECR, Growth.CONST)}) == \
-               ScoreHolder({'a': (1, 1), 'b': (3, 0)}).compare_t((2, 0))
-
-    def test_Growth(self):
-        l = [Growth.STRICT_INCR, Growth.INCR, Growth.CONST, Growth.DECR, Growth.STRICT_DECR, Growth.NON_MONOTONIC]
-        for x, y in combinations(l, 2):
-            assert x != y
-
-    def test_Growth_add(self):
-        l = [Growth.STRICT_INCR, Growth.INCR, Growth.CONST, Growth.DECR, Growth.STRICT_DECR, Growth.NON_MONOTONIC]
-        for i in l:
-            assert i + i == i
-            assert i + Growth.NON_MONOTONIC == Growth.NON_MONOTONIC
-        assert Growth.CONST + Growth.INCR == Growth.INCR + Growth.CONST == Growth.INCR
-        assert Growth.CONST + Growth.STRICT_INCR == Growth.STRICT_INCR + Growth.CONST == Growth.INCR
-        assert Growth.CONST + Growth.DECR == Growth.DECR + Growth.CONST == Growth.DECR
-        assert Growth.CONST + Growth.STRICT_DECR == Growth.STRICT_DECR + Growth.CONST == Growth.DECR
-        assert Growth.INCR + Growth.STRICT_INCR == Growth.STRICT_INCR + Growth.INCR == Growth.INCR
-        assert Growth.INCR + Growth.DECR == Growth.DECR + Growth.INCR == Growth.NON_MONOTONIC
-        assert Growth.INCR + Growth.STRICT_DECR == Growth.STRICT_DECR + Growth.INCR == Growth.NON_MONOTONIC
-        assert Growth.DECR + Growth.STRICT_INCR == Growth.STRICT_INCR + Growth.DECR == Growth.NON_MONOTONIC
-        assert Growth.DECR + Growth.STRICT_DECR == Growth.STRICT_DECR + Growth.DECR == Growth.DECR
-        assert Growth.STRICT_INCR + Growth.STRICT_DECR == Growth.STRICT_DECR + Growth.STRICT_INCR == \
-               Growth.NON_MONOTONIC
-
-    def test_Growth_truediv(self):
-        l = [Growth.STRICT_INCR, Growth.INCR, Growth.CONST, Growth.DECR, Growth.STRICT_DECR, Growth.NON_MONOTONIC]
-        for i in l:
-            assert i / 3.14 == i
-            assert i / i == i
-
-    def test_Growth_compare(self):
-        func = Growth.compare
-        assert func(2, 3) == Growth.STRICT_INCR
-        assert func(4, 3) == Growth.STRICT_DECR
-        assert func(4, 4) == Growth.CONST
+    # def test_ScoreHolder_average(self):
+    #     func = ScoreHolder.average
+    #     assert ScoreHolder({}) == func((ScoreHolder({}) for _ in range(1)))
+    #     assert ScoreHolder({}) == func((ScoreHolder({}) for _ in range(2)))
+    #     assert ScoreHolder({'a': (1,)}) == func(iter([ScoreHolder({'a': (1,)}), ScoreHolder({'a': (1,)})]))
+    #     assert ScoreHolder({'a': (3,)}) == func(iter([ScoreHolder({'a': (2,)}), ScoreHolder({'a': (4,)})]))
+    #     assert ScoreHolder({'a': (3, 5)}) == func(iter([ScoreHolder({'a': (2, 4)}), ScoreHolder({'a': (4, 6)})]))
+    #     assert ScoreHolder({'a': (3, 5), 'b': (0, 1)}) == \
+    #            func(iter([ScoreHolder({'a': (2, 4), 'b': (-1, 2)}), ScoreHolder({'a': (4, 6), 'b': (1, 0)})]))
+    #
+    # def test_ScoreHolder_avg_std(self):
+    #     func = ScoreHolder.avg_std
+    #     assert (ScoreHolder({}), ScoreHolder({})) == func((ScoreHolder({}) for _ in range(1)))
+    #     assert (ScoreHolder({}), ScoreHolder({})) == func((ScoreHolder({}) for _ in range(2)))
+    #     assert (ScoreHolder({'a': (1,)}), ScoreHolder({'a': (0,)})) == \
+    #            func(iter([ScoreHolder({'a': (1,)}), ScoreHolder({'a': (1,)})]))
+    #     assert (ScoreHolder({'a': (3,)}), ScoreHolder({'a': (1,)})) == \
+    #            func(iter([ScoreHolder({'a': (2,)}), ScoreHolder({'a': (4,)})]))
+    #     assert (ScoreHolder({'a': (3, 5)}), ScoreHolder({'a': (1, 1)})) == \
+    #            func(iter([ScoreHolder({'a': (2, 4)}), ScoreHolder({'a': (4, 6)})]))
+    #     assert (ScoreHolder({'a': (4, 5), 'b': (0, 1)}), ScoreHolder({'a': (2, 1), 'b': (1, 1)})) == \
+    #            func(iter([ScoreHolder({'a': (2, 4), 'b': (-1, 2)}), ScoreHolder({'a': (6, 6), 'b': (1, 0)})]))
+    #     assert (ScoreHolder({'a': (1,)}), ScoreHolder({'a': (0,)})) == \
+    #            func(iter([ScoreHolder({'a': (1,)})]))
 
     def test_to_tuple(self):
         func = to_tuple

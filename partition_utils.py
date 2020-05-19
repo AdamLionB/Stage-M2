@@ -26,7 +26,7 @@ def random_partition(mentions: List[T], rng: Callable[[], float]) -> Partition:
         mentions = mentions[y:]
     return partitions
 
-
+#TODO (NOT USED) nice function, is there still a point to it tho ?
 def beta_partition(mentions: List[T], a: float, b: float) -> Partition:
     """
     Generates a random partitions of mentions, entity's sizes are randomly drawn following a
@@ -72,7 +72,9 @@ def all_partition_of_size(n: int) -> Iterator[Partition]:
     """
     Generates all partition of n mentions
     """
-    if n == 1:
+    if n == 0:
+        yield []
+    elif n == 1:
         yield [{1}]
     else:
         for partition in all_partition_of_size(n - 1):
@@ -80,12 +82,15 @@ def all_partition_of_size(n: int) -> Iterator[Partition]:
                 yield partition[:e] + [part.union({n})] + partition[e + 1:]
 
 
+#TODO (NOT USED) make it return things in the right order so it can be used ?
 def all_partition_up_to_size(n: int) -> Iterator[Partition]:
     """
     Generates all partition of n or less mentions.
     """
     def intern(n):
-        if n == 1:
+        if n == 0:
+            yield 0, []
+        elif n == 1:
             yield 1, [{1}]
         else:
             for partition_size, partition in intern(n - 1):
@@ -103,47 +108,32 @@ def is_regular(partition: Partition) -> bool:
     return (not contains_one_entity(partition)) and (not is_dual(partition))
 
 
-def contains_singleton(partition: Partition):
+def contains_singleton(partition: Partition) -> bool:
     """
     Returns True if the given partition contains at least one singleton
     """
     return any((len(entity) == 1 for entity in partition))
 
 
-def contains_one_entity(partition: Partition):
+def contains_one_entity(partition: Partition) -> bool:
     """
     Returns True if the given  partition is composed of only one entity
     """
     return len(partition) == 1
 
 
-def is_dual(partition: Partition):
+def is_dual(partition: Partition) -> bool:
     """
-    Return True if the given partition is composed only of singletons
+    Returns True if the given partition is composed only of singletons
     """
     return all((len(entity) == 1 for entity in partition))
 
 
-def introduce_randomness1(partition: Partition):
+# TODO (NOT USED) remove ?
+def get_partition_size(partition: Partition) -> int:
     """
-    randomize the entity of a random mention in the partition
+    Returns the number of mentions in the partition
     """
-    res = [{*e} for e in partition]
-    old_pos = randint(0, len(res)-1)
-    part = res[old_pos]
-    elem = choice([*part])
-    res[old_pos] -= {elem}
-    if len(part) == 0:
-        res.remove(part)
-
-    new_pos = randint(0, len(res))
-    if new_pos == len(res):
-        res.append({elem})
-    else:
-        res[new_pos] |= {elem}
-    return res
-
-def get_partition_size(partition : Partition):
     return reduce(lambda x, y: x + len(y), partition, 0)
 
 
@@ -161,21 +151,32 @@ def introduce_randomness(partition: Partition):
         res[new_pos] |= {elem}
     return res
 
-
+# FIXME floats <3
 def bell(n: int) -> int:
     """
     Returns the n'th Bell's number.
     This is the number of possible partitions of a set of n elements.
+
+    Sometimes this function will return bell's number +1,
+    this is due to floating point error.  In this application this is not an issue
+    since the only use of this function adds even more floating point issues and
+    such a precision is not needed anyway.
+
+    https://en.wikipedia.org/wiki/Dobiński%27s_formula
     """
     return ceil(sum((k ** n) / (factorial(k)) for k in range(2 * n)) / exp(1))
 
 
 def r_part(mentions: List) -> Partition:
     """
-    Generates a random partition from the mention list
+    Generates a truly random partition from the mention list
+    By truly random we mean that this function follows a uniform distribution,
+    for a given number of mention each partition is as likely as any other to be generated
+
+    Stam, A. J. (1983). Generation of a random partition of a finite set by an urn model.
     """
     def q(n, u):
-        return(bell(n) ** -1) * exp(-1) * (u ** n) / factorial(u)
+        return (bell(n) ** -1) * exp(-1) * (u ** n) / factorial(u)
     dic = defaultdict(list)
     n = len(mentions)
     firsts_q = [q(n, 1)]
