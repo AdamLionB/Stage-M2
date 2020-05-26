@@ -160,7 +160,7 @@ class ScoreHolder(Generic[T]):
             for k, v in self.dic.items()
         })
 
-    # TODO remove ?
+    # TODO (NOT USED) remove or test
     def for_all_values(self) -> Iterator[T]:
         for v in self.dic.values():
             for x in v:
@@ -176,7 +176,7 @@ class ScoreHolder(Generic[T]):
 
 def to_tuple(e: Union[T, Tuple[T]]) -> Tuple[T]:
     """
-    Output the input as tuple in a pure way.
+    Output the input as tuple.
     If the input was a tuple, return it. If it wasn't, puts it in a tuple then return it.
     """
     if type(e) == tuple:
@@ -185,6 +185,10 @@ def to_tuple(e: Union[T, Tuple[T]]) -> Tuple[T]:
 
 
 def to_tuple_last(e: Union[T, Tuple[T]]) -> Tuple[T]:
+    """
+    Returns a tuple containing the input value, or if the input is an tuple,
+    returns the last element of that tuple in a tuple
+    """
     if type(e) == tuple:
         return e[-1],
     return e,

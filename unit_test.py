@@ -4,7 +4,9 @@ from functools import reduce
 from itertools import combinations
 
 import partition_utils
-from utils import ScoreHolder, to_tuple, evaluates
+import utils
+from utils import ScoreHolder
+
 
 
 class test_partition_utils(unittest.TestCase):
@@ -178,8 +180,8 @@ class test_partition_utils(unittest.TestCase):
 
 
 
-class test_find_better_name(unittest.TestCase):
-    def test_Scores_init(self):
+class test_utils(unittest.TestCase):
+    def test_ScoreHolder_init(self):
         dic = {}
         assert ScoreHolder(dic).dic == {}
         dic = {'a': tuple()}
@@ -189,7 +191,7 @@ class test_find_better_name(unittest.TestCase):
         assert ScoreHolder(dic).dic == {'a': (1.0, 1.2)}
         assert ScoreHolder(dic).dic == dic
 
-    def test_Scores_get_item(self):
+    def test_ScoreHolder_get_item(self):
         dic = {'a': tuple()}
         assert ScoreHolder(dic)['a'] == tuple()
         t = (1.0,)
@@ -226,6 +228,18 @@ class test_find_better_name(unittest.TestCase):
         assert ScoreHolder({'a': tuple()}) == \
                ScoreHolder({'a': tuple()}) - ScoreHolder({'a': tuple()})
 
+    def test_ScoreHolder_and(self):
+        assert ScoreHolder({}) == ScoreHolder({}) + ScoreHolder({})
+        assert ScoreHolder({'a': (True,), 'b': (False,), 'c': (False,), 'd': (False,), 'e': (True, False, False, False)}) == \
+               ScoreHolder({'a': (True,), 'b': (True,), 'c': (False,), 'd': (False,), 'e': (True, True, False, False)}) +  \
+               ScoreHolder({'a': (True,), 'b': (False,), 'c': (True,), 'd': (False,), 'e': (True, False, True, False)})
+
+    def test_ScoreHolder_or(self):
+        assert ScoreHolder({}) == ScoreHolder({}) + ScoreHolder({})
+        assert ScoreHolder({'a': (True,), 'b': (True,), 'c': (True,), 'd': (False,), 'e': (True, True, True, False)}) == \
+               ScoreHolder({'a': (True,), 'b': (True,), 'c': (False,), 'd': (False,), 'e': (True, True, False, False)}) +  \
+               ScoreHolder({'a': (True,), 'b': (False,), 'c': (True,), 'd': (False,), 'e': (True, False, True, False)})
+
     def test_ScoreHolder_mul(self):
         assert ScoreHolder({}) == ScoreHolder({}) * 2
         assert ScoreHolder({'a': (1,)}) == ScoreHolder({'a': (1,)}) * 1
@@ -244,6 +258,25 @@ class test_find_better_name(unittest.TestCase):
         assert ScoreHolder({'a': (1,), 'b': (2, 3)}) == ScoreHolder({'a': (1,), 'b': (2, 3)}) ** 1
         assert ScoreHolder({'a': (1,), 'b': (4, 9)}) == ScoreHolder({'a': (1,), 'b': (2, 3)}) ** 2
         assert ScoreHolder({'a': (1,), 'b': (2, 3)}) == ScoreHolder({'a': (1,), 'b': (4, 9)}) ** (1 / 2)
+
+    def test_apply(self):
+        func = lambda x, y : (x,y)
+        assert ScoreHolder({'a': ((1,4),), 'b': ((2,5), (3, 6))}) == \
+               ScoreHolder.apply(ScoreHolder({'a': (1,), 'b': (2, 3)}), func, ScoreHolder({'a': (4,), 'b': (4, 5)}))
+
+    def test_apply_to_value(self):
+        assert ScoreHolder({'a': (1,), 'b': (2, 3)}).apply(lambda x: x) == ScoreHolder({'a': (1,), 'b': (2, 3)})
+        assert ScoreHolder({'a': (1,), 'b': (2, 3)}).apply(lambda x: x*2) == ScoreHolder({'a': (2,), 'b': (4, 6)})
+
+    def test_for_important_value(self):
+        lasts = {1, 3, 6}
+        for a in ScoreHolder({'a': (1,), 'b': (2, 3), 'c': (4, 5, 6)}).for_important_values():
+            try :
+                lasts.remove(a)
+            except:
+                assert False
+        assert True
+
 
     # def test_ScoreHolder_average(self):
     #     func = ScoreHolder.average
@@ -271,10 +304,30 @@ class test_find_better_name(unittest.TestCase):
     #            func(iter([ScoreHolder({'a': (1,)})]))
 
     def test_to_tuple(self):
-        func = to_tuple
+        func = utils.to_tuple
         assert (1,) == func(1)
         assert (1,) == func((1,))
         assert (1, 2) == func((1, 2))
+
+    def test_to_tuple_last(self):
+        func = utils.to_tuple_last
+        assert (1,) == func(1)
+        assert (1,) == func((1,))
+        assert (2, ) == func((1, 2))
+
+    def test_simple_and_acc(self):
+        func = utils.simple_and_acc
+        assert ScoreHolder({'a': (True,), 'b': (False,), 'c': (False,), 'd': (False,), 'e': (True, False, False, False)}) == \
+        func(
+            [ScoreHolder({'a': (True,), 'b': (True,), 'c': (False,), 'd': (False,), 'e': (True, True, False, False)}),
+             ScoreHolder({'a': (True,), 'b': (False,), 'c': (True,), 'd': (False,), 'e': (True, False, True, False)})])
+
+    def test_simple_or_acc(self):
+        func = utils.simple_or_acc()
+        assert ScoreHolder({'a': (True,), 'b': (True,), 'c': (True,), 'd': (False,), 'e': (True, True, True, False)}) == \
+        func(
+            [ScoreHolder({'a': (True,), 'b': (True,), 'c': (False,), 'd': (False,), 'e': (True, True, False, False)}),
+             ScoreHolder({'a': (True,), 'b': (False,), 'c': (True,), 'd': (False,), 'e': (True, False, True, False)})])
 
 if __name__ == '__main__':
     unittest.main()

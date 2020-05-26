@@ -18,31 +18,39 @@ for k, v in ALL_TESTS.items():
     if k in x:
         v.g2()
 
-all_partitions_test.__defaults__ = (1, is_regular)
+
+tmp = all_partitions_test.__defaults__
+all_partitions_test.__defaults__ = tmp[0: 1] + (is_regular,) + tmp[2: len(tmp)]
+
 print('no one entity, no dual')
 for k, v in ALL_TESTS.items():
     if k in x:
         v.g2()
 
-all_partitions_test.__defaults__ = (1, lambda x: (not contains_one_entity(x)) and (not contains_singleton(x)))
+tmp = all_partitions_test.__defaults__
+all_partitions_test.__defaults__ = tmp[0: 1] + (lambda x: (not contains_one_entity(x)) and (not contains_singleton(x)),) + tmp[2: len(tmp)]
+
 print('no one entity, no singleton')
 for k, v in ALL_TESTS.items():
     if k in x:
         v.g2()
 
-all_partitions_test.__defaults__ = (1, lambda x: not contains_one_entity(x))
+tmp = all_partitions_test.__defaults__
+all_partitions_test.__defaults__ = tmp[0: 1] + (lambda x: not contains_one_entity(x),) + tmp[2: len(tmp)]
 print('no one entity')
 for k, v in ALL_TESTS.items():
     if k in x:
         v.g2()
 
-all_partitions_test.__defaults__ = (1, lambda x: not is_dual(x))
+tmp = all_partitions_test.__defaults__
+all_partitions_test.__defaults__ = tmp[0: 1] + (lambda x: not is_dual(x),) + tmp[2: len(tmp)]
 print('no dual')
 for k, v in ALL_TESTS.items():
     if k in x:
         v.g2()
 
-all_partitions_test.__defaults__ = (1, lambda x: not contains_singleton(x))
+tmp = all_partitions_test.__defaults__
+all_partitions_test.__defaults__ = tmp[0: 1] + (lambda x: not contains_singleton(x),) + tmp[2: len(tmp)]
 print('no singletons')
 for k, v in ALL_TESTS.items():
     if k in x:

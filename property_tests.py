@@ -400,7 +400,11 @@ class ExpRunner:
 
     def intern1(self) -> Iterator[Tuple[int, T]]:
         for i in range(self.systematic.start, self.systematic.end):
-            yield i, self.agg[0](all_partitions_test(self.test_func, i=i, repetitions=self.systematic.repetitions))
+            try :
+                yield i, self.agg[0](all_partitions_test(self.test_func, i=i, repetitions=self.systematic.repetitions))
+            except :
+                pass
+
 
     def intern2(self) -> Iterator[Tuple[int, T]]:
         for dists in product(ExpRunner.distributions, repeat=self.n_args):
@@ -433,7 +437,7 @@ class ExpRunner:
             if self.systematic.active:
                 try:
                     yield self.agg[1](self.intern1())
-                except StopIteration:
+                except:
                     pass
             if self.on_corpus.active:
                 yield self.agg[1](self.intern3())
@@ -515,23 +519,23 @@ ALL_TESTS = {
     non_identity_test: ExpRunner(non_identity_test, 'e2 | non_identity', randomize=ExpSetup(True, 100, 1, 7)),
     trivia_1: ExpRunner(trivia_1, 'f', agg=(simple_or_acc, simple_or_acc), randomize=ExpSetup(True, 100, 1, 7)),
     metric_1_symetry_test: ExpRunner(metric_1_symetry_test, 'metrique 1',
-                                     agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
+                                     agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 6)),
     metric_2_non_negativity_test: ExpRunner(metric_2_non_negativity_test, 'metrique 2',
-                                            agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
+                                            agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 6)),
     metric_3: ExpRunner(metric_3, 'metrique 3',
-                        agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
+                        agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 6)),
     metric_4b_ultra: ExpRunner(metric_4b_ultra, 'metrique 4b',
-                                      agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 6)),
+                                      agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 5)),
     metric_4_triangle_test: ExpRunner(metric_4_triangle_test, 'metrique 4',
-                                      agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 6, 7)),
+                                      agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 5)),
     metric_5_indiscernable: ExpRunner(metric_5_indiscernable, 'metrique 5',
-                                      agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
+                                      agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 6)),
     metric_6: ExpRunner(metric_6, 'metrique 6',
-                        agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
+                        agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 6)),
     metric_7: ExpRunner(metric_7, 'metrique 7',
-                        agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
+                        agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 6)),
     metric_8: ExpRunner(metric_8, 'metrique 8',
-                        agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 7)),
+                        agg=(list_and_acc1, list_and_acc2), systematic=ExpSetup(True, 1, 1, 6)),
     singleton_test: ExpRunner(singleton_test, 'singleton',
                               agg=(macro_avg_acc, macro_avg_acc), randomize=ExpSetup(True, 100, 1, 7)),
     entity_test: ExpRunner(entity_test, 'entity',
